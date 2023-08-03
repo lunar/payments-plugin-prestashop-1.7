@@ -116,7 +116,7 @@ export var TestMethods = {
         cy.wait(200);
 
         /** Choose payment method. */
-        cy.get(`input[data-module-name*=${this.VendorName}]`).click();
+        cy.get(`input[data-module-name*=${this.VendorName}]`).check();
 
         /** Check amount. */
         cy.get('div.cart-summary-line.cart-total .value').then($grandTotal => {

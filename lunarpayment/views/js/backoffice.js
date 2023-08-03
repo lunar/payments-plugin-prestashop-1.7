@@ -52,14 +52,14 @@ function ajaxSaveLogo(e) {
             console.log(response);
             $('#save_logo').button('reset');
             if (response.status == 0) {
-                var html = "<strong>Error !</strong> " + response.message;
+                var html = "<strong>Error!</strong> " + response.message;
                 $('#alert').html(html)
                     .show()
                     .removeClass('alert-success')
                     .removeClass('alert-danger')
                     .addClass('alert-danger');
             } else if (response.status == 1) {
-                var html = "<strong>Seccess !</strong> " + response.message;
+                var html = "<strong>Success!</strong> " + response.message;
                 $('#alert').html(html)
                     .show()
                     .removeClass('alert-success')
@@ -84,15 +84,9 @@ $(function() {
 
 /** Function to hide or show LIVE/TEST inputs on module configuration page */
 function checkTransactionMode() {
-    if ("debug" !== document.location.search.match(/debug/gi)?.toString()) {
+    if ("debug" !== document.location.search.match(/debug/gi)?.toString() && "live" === $(`#${PLUGIN_TRANSACTION_MODE}`).val()) {
         $(`#${PLUGIN_TRANSACTION_MODE}`).closest(".form-group").hide();
         $(`#${PLUGIN_TEST_SECRET_KEY}`).closest(".form-group").hide();
         $(`#${PLUGIN_TEST_PUBLIC_KEY}`).closest(".form-group").hide();
-
-        /** Hide live fields when test mode active - prevents misuse. */
-        if ("test" === $(`#${PLUGIN_TRANSACTION_MODE}`).val()) {
-            $(`#${PLUGIN_LIVE_SECRET_KEY}`).closest(".form-group").hide();
-            $(`#${PLUGIN_LIVE_PUBLIC_KEY}`).closest(".form-group").hide();
-        }
     }
 }

@@ -14,9 +14,9 @@
 <script>
 {literal}
     /* Load php data */
-    const captured = '{/literal}{ $lunarTransaction["captured"] }{literal}';
-    const module_payment_not_captured = '{/literal}{ $not_captured_text }{literal}';
-    const payment_select_refund = '{/literal}{ $checkbox_text }{literal}';
+    const captured = '{/literal}{$lunartransaction["captured"]}{literal}';
+    const module_payment_not_captured = '{/literal}{$not_captured_text}{literal}';
+    const payment_select_refund = '{/literal}{$checkbox_text}{literal}';
     const module_vendor_name = 'Lunar';
     const module_vendor_name_lower = module_vendor_name.toLowerCase();
 
@@ -186,6 +186,8 @@
     }
 {/literal}
 </script>
+
+
 <div id="lunar" class="row" style="margin-top:5%;">
     <div class="panel">
         <form id="lunar_form"
@@ -199,11 +201,11 @@
                 <div class="form-group margin-form">
                     <select class="form-control" id="lunar_action" name="lunar_action">
                         <option value="">{l s='-- Select Lunar Action --' mod={$pluginVendorCode} }</option>
-                        {if $lunarTransaction['captured'] == "NO"}
+                        {if $lunartransaction['captured'] == "NO"}
                             <option value="capture">{l s='Capture' mod={$pluginVendorCode} }</option>
                         {/if}
                         <option value="refund">{l s='Refund' mod={$pluginVendorCode} }</option>
-                        {if $lunarTransaction['captured'] == "NO"}
+                        {if $lunartransaction['captured'] == "NO"}
                             <option value="void">{l s='Void' mod={$pluginVendorCode} }</option>
                         {/if}
                     </select>

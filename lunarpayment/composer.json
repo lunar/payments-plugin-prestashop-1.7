@@ -13,6 +13,6 @@
     }
   ],
   "require": {
-    "paylike/php-api": "^1.0.5"
+    "paylike/php-api": "^2.0"
   }
 }

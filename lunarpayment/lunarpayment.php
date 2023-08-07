@@ -915,10 +915,10 @@ class LunarPayment extends PaymentModule {
 	 */
 	public function getAmount( $total, $currency_iso_code ) {
 		$multiplier = $this->getCurrencyMultiplier( $currency_iso_code );
-		$amount     = ceil( $total * $multiplier ); // round to make sure we are always minor units.
-		// if ( function_exists( 'bcmul' ) ) {
-		// 	$amount = ceil( bcmul( $total, $multiplier ) );
-		// }
+		$amount     = ceil ( round( $total * $multiplier ) ); // round to make sure we are always minor units.
+		if ( function_exists( 'bcmul' ) ) {
+			$amount = ceil( bcmul( $total, $multiplier ) );
+		}
 
 		return $amount;
 	}

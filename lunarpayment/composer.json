@@ -1,6 +1,6 @@
 {
   "name": "lunar/plugin-prestashop",
-  "description": "Lunar integration with payment gateway prestashop",
+  "description": "Lunar Online Payments for Prestashop",
   "type": "prestashop-module",
   "version": "1.0.0",
   "license": [
@@ -13,6 +13,12 @@
     }
   ],
   "require": {
-    "paylike/php-api": "^2.0"
-  }
+    "lunar/payments-api-sdk": "dev-initial-dev"
+  },
+  "repositories": [
+    {
+        "type": "vcs",
+        "url": "https://github.com/lunar/payments-api-sdk"
+    }
+  ]
 }

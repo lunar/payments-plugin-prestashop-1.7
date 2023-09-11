@@ -30,6 +30,7 @@ class LunarPayment extends PaymentModule
 	const LIVE_SECRET_KEY = 'LUNAR_LIVE_SECRET_KEY';
 	const TEST_PUBLIC_KEY = 'LUNAR_TEST_PUBLIC_KEY';
 	const TEST_SECRET_KEY = 'LUNAR_TEST_SECRET_KEY';
+	const LOGO_URL = 'LUNAR_LOGO_URL';
 	const CHECKOUT_MODE = 'LUNAR_CHECKOUT_MODE';
 	const ORDER_STATUS = 'LUNAR_ORDER_STATUS';
 	const LANGUAGE_CODE = 'LUNAR_LANGUAGE_CODE';
@@ -68,6 +69,7 @@ class LunarPayment extends PaymentModule
 		Configuration::updateValue( self::TEST_PUBLIC_KEY, '' );
 		Configuration::updateValue( self::LIVE_SECRET_KEY, '' );
 		Configuration::updateValue( self::LIVE_PUBLIC_KEY, '' );
+		Configuration::updateValue( self::LOGO_URL, '' );
 		Configuration::updateValue( self::CHECKOUT_MODE, 'delayed' );
 		Configuration::updateValue( self::ORDER_STATUS, Configuration::get( self::ORDER_STATUS ) );
 		Configuration::updateValue( $language_code . '_' . self::PAYMENT_METHOD_TITLE, 'Card' );
@@ -178,6 +180,7 @@ class LunarPayment extends PaymentModule
 			&& Configuration::deleteByName( self::TEST_PUBLIC_KEY )
 			&& Configuration::deleteByName( self::LIVE_SECRET_KEY )
 			&& Configuration::deleteByName( self::LIVE_PUBLIC_KEY )
+			&& Configuration::deleteByName( self::LOGO_URL )
 			&& Configuration::deleteByName( self::CHECKOUT_MODE )
 			&& Configuration::deleteByName( self::ORDER_STATUS )
 			&& Configuration::deleteByName( self::PAYMENT_METHOD_TITLE )
@@ -207,9 +210,9 @@ class LunarPayment extends PaymentModule
 			}
 
 			if ( count( Tools::getvalue( self::ACCEPTED_CARDS ) ) > 1 ) {
-				$creditCardLogo = implode( ',', Tools::getvalue( self::ACCEPTED_CARDS ) );
+				$acceptedCards = implode( ',', Tools::getvalue( self::ACCEPTED_CARDS ) );
 			} else {
-				$creditCardLogo = Tools::getvalue( self::ACCEPTED_CARDS );
+				$acceptedCards = Tools::getvalue( self::ACCEPTED_CARDS );
 			}
 
 			$transactionMode = Tools::getvalue( self::TRANSACTION_MODE );
@@ -265,7 +268,7 @@ class LunarPayment extends PaymentModule
 			// }
 
 			
-			Configuration::updateValue( 'LUNAR_LANGUAGE_CODE', $language_code );
+			Configuration::updateValue( self::LANGUAGE_CODE, $language_code );
 
 			Configuration::updateValue( self::PAYMENT_METHOD_STATUS, Tools::getValue( self::PAYMENT_METHOD_STATUS ) );
 			Configuration::updateValue( self::TRANSACTION_MODE, $transactionMode );
@@ -279,12 +282,14 @@ class LunarPayment extends PaymentModule
 				Configuration::updateValue( self::LIVE_SECRET_KEY, $live_secret_key );
 			}
 			
+			Configuration::updateValue( self::LOGO_URL, Tools::getValue( self::LOGO_URL ) );
+
 			Configuration::updateValue( self::CHECKOUT_MODE, Tools::getValue( self::CHECKOUT_MODE ) );
 			Configuration::updateValue( self::ORDER_STATUS, Tools::getValue( self::ORDER_STATUS ) );
 			Configuration::updateValue( $language_code . '_' . self::PAYMENT_METHOD_TITLE, $payment_method_title );
 			Configuration::updateValue( $language_code . '_' . self::PAYMENT_METHOD_DESC, $payment_method_desc );
 			Configuration::updateValue( $language_code . '_' . self::SHOP_TITLE, $shop_title );
-			Configuration::updateValue( self::ACCEPTED_CARDS, $creditCardLogo );
+			Configuration::updateValue( self::ACCEPTED_CARDS, $acceptedCards );
 
 			if ( $valid ) {
 				$this->context->controller->confirmations[] = $this->l( 'Settings saved successfully' );
@@ -435,6 +440,13 @@ class LunarPayment extends PaymentModule
 						'required' => true
 					),
 					array(
+						'type'     => 'text',
+						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Must be a link begins with "https://" to a JPG,JPEG or PNG file' ) . '">' . $this->l( 'Logo URL' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
+						'name'     => self::LOGO_URL,
+						'class'    => "lunar-config",
+						'required' => true
+					),
+					array(
 						'type'     => 'select',
 						'lang'     => true,
 						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'If you deliver your product instantly (e.g. a digital product), choose Instant mode. If not, use Delayed' ) . '">' . $this->l( 'Capture mode' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
@@ -493,7 +505,7 @@ class LunarPayment extends PaymentModule
 						'type'     => 'select',
 						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Choose logos to show in frontend checkout page.' ) . '">' . $this->l( 'Accepted cards' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
 						'name'     => self::ACCEPTED_CARDS,
-						'class'    => "lunar-config creditcard-logo",
+						'class'    => "lunar-config accepted-cards",
 						'multiple' => true,
 						'options'  => array(
 							'query' => $logos_array,
@@ -540,7 +552,7 @@ class LunarPayment extends PaymentModule
 	public function getConfigFieldsValues() {
 		$language_code = Configuration::get( self::LANGUAGE_CODE );
 
-		$creditCardLogo = explode( ',', Configuration::get( self::ACCEPTED_CARDS ) );
+		$acceptedCards = explode( ',', Configuration::get( self::ACCEPTED_CARDS ) );
 
 		$payment_method_title = $this->getTranslatedModuleConfig(self::PAYMENT_METHOD_TITLE);
 		$payment_method_desc  = $this->getTranslatedModuleConfig(self::PAYMENT_METHOD_DESC);
@@ -583,12 +595,13 @@ class LunarPayment extends PaymentModule
 			self::TEST_SECRET_KEY   => Configuration::get( self::TEST_SECRET_KEY ),
 			self::LIVE_PUBLIC_KEY   => Configuration::get( self::LIVE_PUBLIC_KEY ),
 			self::LIVE_SECRET_KEY   => Configuration::get( self::LIVE_SECRET_KEY ),
+			self::LOGO_URL    		=> Configuration::get( self::LOGO_URL ),
 			self::CHECKOUT_MODE     => Configuration::get( self::CHECKOUT_MODE ),
 			self::ORDER_STATUS      => Configuration::get( self::ORDER_STATUS ),
 			$language_code . '_' . self::PAYMENT_METHOD_TITLE => $payment_method_title,
 			$language_code . '_' . self::PAYMENT_METHOD_DESC  => $payment_method_desc,
 			$language_code . '_' . self::SHOP_TITLE           => $shop_title,
-			self::ACCEPTED_CARDS . '[]' => $creditCardLogo,
+			self::ACCEPTED_CARDS . '[]' => $acceptedCards,
 		);
 	}
 
@@ -734,7 +747,7 @@ class LunarPayment extends PaymentModule
 			'http_host'                      => Tools::getHttpHost(),
 			'shop_name'                      => $this->context->shop->name,
 			'payment_method_title'           => $payment_method_title,
-			'payment_method_creditcard_logo' => explode( ',', Configuration::get( self::ACCEPTED_CARDS ) ),
+			'accepted_cards' 				 => explode( ',', Configuration::get( self::ACCEPTED_CARDS ) ),
 			'payment_method_desc'            => $payment_method_desc,
 			'this_plugin_status'			 => Configuration::get( self::PAYMENT_METHOD_STATUS ),
 			'shop_title'                     => $shop_title,

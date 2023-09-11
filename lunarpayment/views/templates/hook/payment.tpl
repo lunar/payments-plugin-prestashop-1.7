@@ -17,7 +17,7 @@
     </style>
     <script>
         {literal}
-        
+
             var lunarPayment = {
                 init: function() {
         {/literal}
@@ -240,7 +240,7 @@
                     <span style="margin-right: 10px;">{l s={$payment_method_title} mod=lunarpayment }</span>
                     <span>
                         <ul class="cards">
-                            {foreach from=$payment_method_creditcard_logo item=logo}
+                            {foreach from=$accepted_cards item=logo}
                                 <li>
                                     <img src="{$this_plugin_path}/views/img/{$logo}" title="{$logo}" alt="{$logo}"/>
                                 </li>

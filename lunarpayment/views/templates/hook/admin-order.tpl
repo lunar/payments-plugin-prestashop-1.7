@@ -1,17 +1,5 @@
-{*
-* Lunar
-*
-*  @author     Lunar
-*  @copyright  Lunar
-*  @license    MIT license: https://opensource.org/licenses/MIT
-*}
-
-{*
-    Initialize the plugin code for use below.
-*}
-{assign var='pluginVendorCode' value='lunarpayment'}
-
 <script>
+
 {literal}
     /* Load php data */
     const captured = '{/literal}{$lunartransaction["captured"]}{literal}';
@@ -195,18 +183,18 @@
                 method="post">
             <fieldset {if $ps_version < 1.5}style="width: 400px;"{/if}>
                 <legend class="panel-heading">
-                    <img src="../img/os/7.gif" alt=""/>{l s='Process Lunar Payment' mod={$pluginVendorCode} }
+                    <img src="../img/os/7.gif" alt=""/>{l s='Process Lunar Payment' mod=lunarpayment }
                 </legend>
                 <div id="alert" class="alert" style="display: none;"></div>
                 <div class="form-group margin-form">
                     <select class="form-control" id="lunar_action" name="lunar_action">
-                        <option value="">{l s='-- Select Lunar Action --' mod={$pluginVendorCode} }</option>
+                        <option value="">{l s='-- Select Lunar Action --' mod=lunarpayment }</option>
                         {if $lunartransaction['captured'] == "NO"}
-                            <option value="capture">{l s='Capture' mod={$pluginVendorCode} }</option>
+                            <option value="capture">{l s='Capture' mod=lunarpayment }</option>
                         {/if}
-                        <option value="refund">{l s='Refund' mod={$pluginVendorCode} }</option>
+                        <option value="refund">{l s='Refund' mod=lunarpayment }</option>
                         {if $lunartransaction['captured'] == "NO"}
-                            <option value="void">{l s='Void' mod={$pluginVendorCode} }</option>
+                            <option value="void">{l s='Void' mod=lunarpayment }</option>
                         {/if}
                     </select>
                 </div>
@@ -214,13 +202,13 @@
                 <div class="form-group margin-form">
                     <div class="col-md-12">
                         <input class="form-control" name="lunar_amount_to_refund" style="display: none;"
-                                placeholder="{l s='Amount to refund' mod={$pluginVendorCode} }" type="text"/>
+                                placeholder="{l s='Amount to refund' mod=lunarpayment }" type="text"/>
                     </div>
                 </div>
 
                 <div class="form-group margin-form">
                     <input class="pull-right btn btn-default" name="submit_lunar_action" id="submit_lunar_action"
-                            type="submit" class="btn btn-primary" value="{l s='Process Action' mod={$pluginVendorCode} }"/>
+                            type="submit" class="btn btn-primary" value="{l s='Process Action' mod=lunarpayment }"/>
                 </div>
             </fieldset>
         </form>

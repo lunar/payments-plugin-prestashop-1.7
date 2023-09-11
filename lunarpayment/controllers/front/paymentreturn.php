@@ -4,23 +4,18 @@
  * @author    Lunar <support@lunar.app>
  * @copyright Copyright (c) permanent, Lunar
  * @license   Addons PrestaShop license limitation
- * @version   1.2.0
  * @link      https://lunar.app
  *
  */
 
-if ( ! class_exists( 'Lunar\\Client' ) ) {
-	require_once( 'modules/lunarpayment/api/Client.php' );
-}
+use Lunar\Lunar as ApiClient;
 
-
+/**
+ * 
+ */
 class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontController {
 
-	const VENDOR_NAME = 'lunar';
-	const MODULE_CODE = 'lunarpayment';
-	const PLUGIN_CHECKOUT_MODE = 'LUNAR_CHECKOUT_MODE';
-	const PLUGIN_ORDER_STATUS = 'LUNAR_ORDER_STATUS';
-	const PLUGIN_SECRET_KEY = 'LUNAR_SECRET_KEY';
+
 
 	public function __construct() {
 		parent::__construct();
@@ -38,14 +33,14 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 
 		$authorized = false;
 		foreach ( Module::getPaymentModules() as $module ) {
-			if ( $module['name'] == self::MODULE_CODE ) {
+			if ( $module['name'] == 'lunarpayment' ) {
 				$authorized = true;
 				break;
 			}
 		}
 
 		if ( ! $authorized ) {
-			die( $this->module->l( self::VENDOR_NAME . ' payment method is not available.', 'paymentreturn' ) );
+			die( $this->module->l( 'Lunar payment method is not available.', 'paymentreturn' ) );
 		}
 
 		$customer = new Customer( $cart->id_customer );
@@ -53,27 +48,33 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 			Tools::redirect( 'index.php?controller=order&step=1' );
 		}
 
-		Lunar\Client::setKey( Configuration::get( self::PLUGIN_SECRET_KEY ) );
-		$cart_total               = $cart->getOrderTotal( true, Cart::BOTH );
-		$currency            = new Currency( (int) $cart->id_currency );
-		$cart_amount              = $cart_total;
-		$status_paid         = (int) Configuration::get( self::PLUGIN_ORDER_STATUS );
+		$secretKey = 'live' == Configuration::get( $this->module::TRANSACTION_MODE )
+						? Configuration::get( $this->module::LIVE_SECRET_KEY )
+						: Configuration::get( $this->module::TEST_SECRET_KEY );
+
+		$apiClient = new ApiClient( $secretKey );
+
+		$cart_total = $cart->getOrderTotal( true, Cart::BOTH );
+		$currency = new Currency( (int) $cart->id_currency );
+		$cart_amount = $cart_total;
+		$status_paid = (int) Configuration::get( $this->module::ORDER_STATUS );
 		// $status_paid = Configuration::get('PS_OS_PAYMENT');
+
 		$transactionid = Tools::getValue( 'transactionid' );
 
 		$transaction_failed = false;
 
-		if ( Configuration::get( self::PLUGIN_CHECKOUT_MODE ) == 'delayed' ) {
-			$fetch = Lunar\Transaction::fetch( $transactionid );
+		if ( Configuration::get( $this->module::CHECKOUT_MODE ) == 'delayed' ) {
+			$fetch = $apiClient->payments()->fetch( $transactionid );
 
 			if ( is_array( $fetch ) && isset( $fetch['error'] ) && $fetch['error'] == 1 ) {
 				PrestaShopLogger::addLog( $fetch['message'] );
 				$this->context->smarty->assign( array(
-					"{$this->vendorName}_order_error"   => 1,
-					"{$this->vendorName}_error_message" => $fetch['message']
+					"lunar_order_error"   => 1,
+					"lunar_error_message" => $fetch['message']
 				) );
 
-				return $this->setTemplate( 'module:' . self::MODULE_CODE . '/views/templates/front/payment_error.tpl' );
+				return $this->setTemplate( 'module:lunarpayment/views/templates/front/payment_error.tpl' );
 
 			} elseif ( is_array( $fetch ) && $fetch['transaction']['currency'] == $currency->iso_code ) {
 
@@ -84,6 +85,7 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
                     Captured Amount: ' . $fetch['transaction']['capturedAmount'] . '
                     Order time: ' . $fetch['transaction']['created'] . '
                     Currency code: ' . $fetch['transaction']['currency'];
+					
 				if ( $this->module->validateOrder( (int) $cart->id, 2, $total, $this->module->displayName, $message, array('transaction_id' => $transactionid), null, false, $customer->secure_key ) ) {
 
 					if ( Validate::isCleanHtml( $message ) ) {
@@ -120,7 +122,7 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 					Tools::redirectLink( __PS_BASE_URI__ . 'index.php?controller=order-confirmation&id_cart=' . $cart->id . '&id_module=' . $this->module->id . '&id_order=' . $this->module->currentOrder . '&key=' . $customer->secure_key );
 				} else {
 					$transaction_failed = true;
-					Lunar\Transaction::void( $transactionid, array( 'amount' => $total ) ); //Cancel Order
+					$apiClient->payments()->cancel( $transactionid, array( 'amount' => $total ) ); //Cancel Order
 				}
 			} else {
 				$transaction_failed = true;
@@ -131,16 +133,17 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 				'currency'   => $currency->iso_code,
 				'amount'     => $cart_amount,
 			);
-			$capture = Lunar\Transaction::capture( $transactionid, $data );
+			$capture = $apiClient->payments()->capture( $transactionid, $data );
 
 			if ( is_array( $capture ) && ! empty( $capture['error'] ) && $capture['error'] == 1 ) {
 				PrestaShopLogger::addLog( $capture['message'] );
 				$this->context->smarty->assign( array(
-					"{$this->vendorName}_order_error"   => 1,
-					"{$this->vendorName}_error_message" => $capture['message']
+					"lunar_order_error"   => 1,
+					"lunar_error_message" => $capture['message']
 				) );
 
-				return $this->setTemplate( 'module:' . self::MODULE_CODE . '/views/templates/front/payment_error.tpl' );
+				return $this->setTemplate( 'module:lunarpayment/views/templates/front/payment_error.tpl' );
+				
 			} elseif ( ! empty( $capture['transaction'] ) ) {
 
 				$total = $capture['transaction']['amount'];
@@ -199,9 +202,9 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 		}
 
 		if ( $transaction_failed ) {
-			$this->context->smarty->assign( "{$this->vendorName}_order_error", 1 );
+			$this->context->smarty->assign( "lunar_order_error", 1 );
 
-			return $this->setTemplate( 'module:' . self::MODULE_CODE . '/views/templates/front/payment_error.tpl' );
+			return $this->setTemplate( 'module:lunarpayment/views/templates/front/payment_error.tpl' );
 		}
 	}
 }

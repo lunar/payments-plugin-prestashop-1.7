@@ -1,7 +1,3 @@
-{*
-    Initialize the plugin code for use below.
-*}
-{assign var='pluginVendorCode' value='lunarpayment'}
 
 {if $this_plugin_status == 'enabled'}
     <style type="text/css">
@@ -21,10 +17,7 @@
     </style>
     <script>
         {literal}
-
-            var pluginVendorName = 'lunar';
-            var pluginVendorCode = 'lunarpayment';
-
+        
             var lunarPayment = {
                 init: function() {
         {/literal}
@@ -38,8 +31,7 @@
                     this.PS_SSL_ENABLED = "{$PS_SSL_ENABLED|escape:'htmlall':'UTF-8'}";
                     this.host = "{$http_host|escape:'htmlall':'UTF-8'}";
                     this.BASE_URI = "{$base_uri|escape:'htmlall':'UTF-8'}";
-                    this.popup_title = "{$popup_title|escape:'htmlall':'UTF-8'}";
-                    this.popup_description = "{$popup_description}";
+                    this.shop_title = "{$shop_title|escape:'htmlall':'UTF-8'}";
                     this.currency_code = "{$currency_code|escape:'htmlall':'UTF-8'}";
                     this.amount = {$amount|escape:'htmlall':'UTF-8'};
                     this.exponent = {$exponent};
@@ -55,7 +47,7 @@
                     this.platform = "{$platform|escape:'htmlall':'UTF-8'}";
                     this.module_version = "{$module_version|escape:'htmlall':'UTF-8'}";
                     this.url_controller = "{$redirect_url|escape:'htmlall':'UTF-8'}";
-                    this.pay_text = "{l s='Pay' mod={$pluginVendorCode} js=1}";
+                    this.pay_text = "{l s='Pay' mod=lunarpayment js=1}";
                     this.qry_str = "{$qry_str}";
 
         {literal}
@@ -73,13 +65,12 @@
                 pay: function() {
                     this.sdkClient.pay({
                         test: ('live' === this.active_status) ? (false) : (true),
-                        title: this.popup_title,
+                        title: this.shop_title,
                         amount: {
                             currency: this.currency_code,
                             exponent: this.exponent,
                             value: this.amount
                         },
-                        description: this.popup_description,
                         locale: this.locale,
                         custom: {
                             products: this.products,
@@ -152,7 +143,7 @@
                 },
 
                 bindPayPopup: function() {
-                    $(`#pay-by-${pluginVendorName}`).on('click', function (e) {
+                    $(`#pay-by-lunar`).on('click', function (e) {
                         e.preventDefault();
                         if (!$('#conditions-to-approve input[type="checkbox"]:checked').length) return false;
                         lunarPayment.pay();
@@ -162,19 +153,19 @@
                 maybeBindPaymentPopup: function() {
                     var paymentMethod = document.querySelector('input[name="payment-option"]:checked');
                     if (!paymentMethod) return false;
-                    var $payButton = $(`#pay-by-${pluginVendorName}`);
+                    var $payButton = $(`#pay-by-lunar`);
                     var $submitButton = $('#payment-confirmation button');
                     // uncheck terms checkbox
                     lunarPayment.ifCheckedUncheck();
                     // if payment method is not this add the buttons back
-                    if (paymentMethod.dataset.moduleName !== pluginVendorCode) {
+                    if (paymentMethod.dataset.moduleName !== 'lunarpayment') {
                         $submitButton.removeClass('hide-element');
                         $payButton.addClass('hide-element');
                     } else {
                         if (!$payButton.length) {
                             $submitButton.after('<div ' +
                                 'style="-webkit-appearance: none; background-color: #2fb5d2;" ' +
-                                `class="btn btn-primary center-block disabled " id="pay-by-${pluginVendorName}">` + this.pay_text + '</div>');
+                                `class="btn btn-primary center-block disabled " id="pay-by-lunar">` + this.pay_text + '</div>');
                             lunarPayment.bindPayPopup();
                         }
                         $submitButton.addClass('hide-element');
@@ -246,7 +237,7 @@
                        src="{$this_plugin_path}logo.png" alt=""
                        style="vertical-align: middle; margin-right: 10px; width:57px; height:57px;"/>
                 <div style="float:left; width:100%">
-                    <span style="margin-right: 10px;">{l s={$payment_method_title} mod={$pluginVendorCode} }</span>
+                    <span style="margin-right: 10px;">{l s={$payment_method_title} mod=lunarpayment }</span>
                     <span>
                         <ul class="cards">
                             {foreach from=$payment_method_creditcard_logo item=logo}
@@ -256,7 +247,7 @@
                             {/foreach}
                         </ul>
                     </span>
-                    <small style="font-size: 12px; display: block; font-weight: normal; letter-spacing: 1px; max-width:100%;">{l s={$payment_method_desc} mod={$pluginVendorCode} }</small>
+                    <small style="font-size: 12px; display: block; font-weight: normal; letter-spacing: 1px; max-width:100%;">{l s={$payment_method_desc} mod=lunarpayment }</small>
                 </div>
             </div>
         </div>

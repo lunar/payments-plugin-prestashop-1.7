@@ -56,8 +56,7 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 		Lunar\Client::setKey( Configuration::get( self::PLUGIN_SECRET_KEY ) );
 		$cart_total               = $cart->getOrderTotal( true, Cart::BOTH );
 		$currency            = new Currency( (int) $cart->id_currency );
-		$currency_multiplier = $this->module->getCurrencyMultiplier( $currency->iso_code );
-		$cart_amount              = $this->module->getAmount( $cart_total, $currency->iso_code );
+		$cart_amount              = $cart_total;
 		$status_paid         = (int) Configuration::get( self::PLUGIN_ORDER_STATUS );
 		// $status_paid = Configuration::get('PS_OS_PAYMENT');
 		$transactionid = Tools::getValue( 'transactionid' );
@@ -75,15 +74,14 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 				) );
 
 				return $this->setTemplate( 'module:' . self::MODULE_CODE . '/views/templates/front/payment_error.tpl' );
-			} elseif ( is_array( $fetch ) && $fetch['transaction']['currency'] == $currency->iso_code ) {
-				//elseif (is_array($fetch) && $fetch['transaction']['currency'] == $currency->iso_code && $fetch['transaction']['custom']['orderId'] == $cart->id && (int)$fetch['transaction']['amount'] == (int)$amount) {
 
-				$total = $fetch['transaction']['amount'] / $currency_multiplier;
-				$amount = $fetch['transaction']['amount'];
+			} elseif ( is_array( $fetch ) && $fetch['transaction']['currency'] == $currency->iso_code ) {
+
+				$total = $fetch['transaction']['amount'];
 
 				$message = 'Trx ID: ' . $transactionid . '
-                    Authorized Amount: ' . ( $fetch['transaction']['amount'] / $currency_multiplier ) . '
-                    Captured Amount: ' . ( $fetch['transaction']['capturedAmount'] / $currency_multiplier ) . '
+                    Authorized Amount: ' . $total . '
+                    Captured Amount: ' . $fetch['transaction']['capturedAmount'] . '
                     Order time: ' . $fetch['transaction']['created'] . '
                     Currency code: ' . $fetch['transaction']['currency'];
 				if ( $this->module->validateOrder( (int) $cart->id, 2, $total, $this->module->displayName, $message, array('transaction_id' => $transactionid), null, false, $customer->secure_key ) ) {
@@ -91,6 +89,7 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 					if ( Validate::isCleanHtml( $message ) ) {
 						if ( $this->module->getPSV() == '1.7.2' ) {
 							$id_customer_thread = CustomerThread::getIdCustomerThreadByEmailAndIdOrder( $customer->email, $this->module->currentOrder );
+							
 							if ( ! $id_customer_thread ) {
 								$customer_thread              = new CustomerThread();
 								$customer_thread->id_contact  = 0;
@@ -121,7 +120,7 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 					Tools::redirectLink( __PS_BASE_URI__ . 'index.php?controller=order-confirmation&id_cart=' . $cart->id . '&id_module=' . $this->module->id . '&id_order=' . $this->module->currentOrder . '&key=' . $customer->secure_key );
 				} else {
 					$transaction_failed = true;
-					Lunar\Transaction::void( $transactionid, array( 'amount' => $amount ) ); //Cancel Order
+					Lunar\Transaction::void( $transactionid, array( 'amount' => $total ) ); //Cancel Order
 				}
 			} else {
 				$transaction_failed = true;
@@ -144,13 +143,13 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 				return $this->setTemplate( 'module:' . self::MODULE_CODE . '/views/templates/front/payment_error.tpl' );
 			} elseif ( ! empty( $capture['transaction'] ) ) {
 
-				$total = $capture['transaction']['amount'] / $currency_multiplier;
+				$total = $capture['transaction']['amount'];
 
 				$validOrder = $this->module->validateOrder( (int) $cart->id, $status_paid, $total, $this->module->displayName, null, array('transaction_id' => $transactionid), null, false, $customer->secure_key );
 
 				$message = 'Trx ID: ' . $transactionid . '
-                    Authorized Amount: ' . ( $capture['transaction']['amount'] / $currency_multiplier ) . '
-                    Captured Amount: ' . ( $capture['transaction']['capturedAmount'] / $currency_multiplier ) . '
+                    Authorized Amount: ' . $total . '
+                    Captured Amount: ' . $capture['transaction']['capturedAmount'] . '
                     Order time: ' . $capture['transaction']['created'] . '
                     Currency code: ' . $capture['transaction']['currency'];
 

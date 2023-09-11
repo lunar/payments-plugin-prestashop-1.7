@@ -52,7 +52,7 @@
                     this.ip = "{$ip|escape:'htmlall':'UTF-8'}";
                     this.locale = "{$locale|escape:'htmlall':'UTF-8'}";
                     this.platform_version = "{$platform_version|escape:'htmlall':'UTF-8'}";
-                    this.ecommerce = "{$ecommerce|escape:'htmlall':'UTF-8'}";
+                    this.platform = "{$platform|escape:'htmlall':'UTF-8'}";
                     this.module_version = "{$module_version|escape:'htmlall':'UTF-8'}";
                     this.url_controller = "{$redirect_url|escape:'htmlall':'UTF-8'}";
                     this.pay_text = "{l s='Pay' mod={$pluginVendorCode} js=1}";
@@ -91,7 +91,7 @@
                                 IP: this.ip
                             },
                             platform: {
-                                name: 'Prestashop',
+                                name: this.platform,
                                 version: this.platform_version
                             },
                             PluginVersion: this.module_version

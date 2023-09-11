@@ -223,8 +223,8 @@ class LunarPayment extends PaymentModule {
 
 			if ( empty( $PAYMENT_METHOD_TITLE ) ) {
 				$this->context->controller->errors[ $language_code . '_' . self::PLUGIN_PAYMENT_METHOD_TITLE ] = $this->l( 'Payment method title required!' );
-				$PAYMENT_METHOD_TITLE                                                          = ( ! empty( Configuration::get( $language_code . '_' . self::PLUGIN_PAYMENT_METHOD_TITLE ) ) ) ? Configuration::get( $language_code . '_' . self::PLUGIN_PAYMENT_METHOD_TITLE ) : '';
-				$valid                                                                                 = false;
+				$PAYMENT_METHOD_TITLE = ( ! empty( Configuration::get( $language_code . '_' . self::PLUGIN_PAYMENT_METHOD_TITLE ) ) ) ? Configuration::get( $language_code . '_' . self::PLUGIN_PAYMENT_METHOD_TITLE ) : '';
+				$valid = false;
 			}
 
 			if ( count( Tools::getvalue( self::PLUGIN_PAYMENT_METHOD_CREDITCARD_LOGO ) ) > 1 ) {
@@ -506,7 +506,6 @@ class LunarPayment extends PaymentModule {
 							'name'  => 'name'
 						),
 						'required' => true,
-						// 'desc' => $this->l('Instant capture: Amount is captured as soon as the order is confirmed by customer.').'<br>'.$this->l('Delayed capture: Amount is captured after order status is changed to shipped.')
 					),
 					array(
 						'type'    => 'select',
@@ -584,10 +583,10 @@ class LunarPayment extends PaymentModule {
 
 		$creditCardLogo = explode( ',', Configuration::get( self::PLUGIN_PAYMENT_METHOD_LOGO ) );
 
-		$payment_method_title = ( ! empty( Configuration::get( $language_code . '_' . self::PLUGIN_PAYMENT_METHOD_TITLE ) ) ) ? Configuration::get( $language_code . '_' . self::PLUGIN_PAYMENT_METHOD_TITLE ) : ( ! empty( Configuration::get( 'en_' .  self::PLUGIN_PAYMENT_METHOD_TITLE ) ) ? Configuration::get( 'en_' . self::PLUGIN_PAYMENT_METHOD_TITLE ) : '' );
-		$payment_method_desc  = ( ! empty( Configuration::get( $language_code . '_' . self::PLUGIN_PAYMENT_METHOD_DESC ) ) ) ? Configuration::get( $language_code . '_' . self::PLUGIN_PAYMENT_METHOD_DESC ) : ( ! empty( Configuration::get( 'en_' .  self::PLUGIN_PAYMENT_METHOD_DESC ) ) ? Configuration::get( 'en_' . self::PLUGIN_PAYMENT_METHOD_DESC ) : '' );
-		$popup_title          = ( ! empty( Configuration::get( $language_code . '_' . self::PLUGIN_POPUP_TITLE ) ) ) ? Configuration::get( $language_code . '_' . self::PLUGIN_POPUP_TITLE ) : ( ! empty( Configuration::get( 'en_' .  self::PLUGIN_POPUP_TITLE ) ) ? Configuration::get( 'en_' . self::PLUGIN_POPUP_TITLE ) : '' );
-		$popup_description    = ( ! empty( Configuration::get( $language_code . '_' . self::PLUGIN_POPUP_DESC ) ) ) ? Configuration::get( $language_code . '_' . self::PLUGIN_POPUP_DESC ) : ( ! empty( Configuration::get( 'en_' .  self::PLUGIN_POPUP_DESC ) ) ? Configuration::get( 'en_' . self::PLUGIN_POPUP_DESC ) : '' );
+		$payment_method_title = $this->getTranslatedModuleConfig(self::PLUGIN_PAYMENT_METHOD_TITLE);
+		$payment_method_desc  = $this->getTranslatedModuleConfig(self::PLUGIN_PAYMENT_METHOD_DESC);
+		$popup_title          = $this->getTranslatedModuleConfig(self::PLUGIN_POPUP_TITLE);
+		$popup_description    = $this->getTranslatedModuleConfig(self::PLUGIN_POPUP_DESC);
 
 		if ( empty( $payment_method_title ) ) {
 			$this->context->controller->errors[ $language_code . '_' . self::PLUGIN_PAYMENT_METHOD_TITLE ] = $this->l( 'Payment method title required!' );
@@ -714,7 +713,6 @@ class LunarPayment extends PaymentModule {
 	}
 
 	public function hookPaymentOptions( $params ) {
-		$language_code = Configuration::get( self::PLUGIN_LANGUAGE_CODE );
 		//ensure plugin key is set
 		if ( Configuration::get( self::PLUGIN_TRANSACTION_MODE ) == 'test' ) {
 			if ( ! Configuration::get( self::PLUGIN_TEST_PUBLIC_KEY ) || ! Configuration::get( self::PLUGIN_TEST_SECRET_KEY ) ) {
@@ -752,38 +750,32 @@ class LunarPayment extends PaymentModule {
 			$p ++;
 		}
 
-		$payment_method_title = ( ! empty( Configuration::get( $language_code . '_' . self::PLUGIN_PAYMENT_METHOD_TITLE ) ) ) ? Configuration::get( $language_code . '_' . self::PLUGIN_PAYMENT_METHOD_TITLE ) : ( ! empty( Configuration::get( 'en_' . self::PLUGIN_PAYMENT_METHOD_TITLE ) ) ? Configuration::get( 'en_' . self::PLUGIN_PAYMENT_METHOD_TITLE ) : '' );
-		$payment_method_desc  = ( ! empty( Configuration::get( $language_code . '_' . self::PLUGIN_PAYMENT_METHOD_DESC ) ) ) ? Configuration::get( $language_code . '_' . self::PLUGIN_PAYMENT_METHOD_DESC ) : ( ! empty( Configuration::get( 'en_' . self::PLUGIN_PAYMENT_METHOD_DESC ) ) ? Configuration::get( 'en_' . self::PLUGIN_PAYMENT_METHOD_DESC ) : '' );
-		$popup_title          = ( ! empty( Configuration::get( $language_code . '_' . self::PLUGIN_POPUP_TITLE ) ) ) ? Configuration::get( $language_code . '_' . self::PLUGIN_POPUP_TITLE ) : ( ! empty( Configuration::get( 'en_' . self::PLUGIN_POPUP_TITLE ) ) ? Configuration::get( 'en_' . self::PLUGIN_POPUP_TITLE ) : '' );
+		$payment_method_title = $this->getTranslatedModuleConfig(self::PLUGIN_PAYMENT_METHOD_TITLE);
+		$payment_method_desc  = $this->getTranslatedModuleConfig(self::PLUGIN_PAYMENT_METHOD_DESC);
+		$popup_title          = $this->getTranslatedModuleConfig(self::PLUGIN_POPUP_TITLE);
 
 		if ( Configuration::get( self::PLUGIN_SHOW_POPUP_DESC ) == 'yes' ) {
-			$popup_description = ( ! empty( Configuration::get( $language_code . '_' . self::PLUGIN_POPUP_DESC ) ) ) ? Configuration::get( $language_code . '_' . self::PLUGIN_POPUP_DESC ) : ( ! empty( Configuration::get( 'en_' . self::PLUGIN_POPUP_DESC ) ) ? Configuration::get( 'en_' . self::PLUGIN_POPUP_DESC ) : '' );
+			$popup_description = $this->getTranslatedModuleConfig(self::PLUGIN_POPUP_DESC);
 		} else {
 			//$popup_description = implode( ", & ", $products_label );
 			$popup_description = '';
 		}
-
-		$currency            = new Currency( (int) $params['cart']->id_currency );
-		$currency_code       = $currency->iso_code;
-		$currency_multiplier = $this->getCurrencyMultiplier( $currency->iso_code );
-		$amount              = $this->getAmount(  $params['cart']->getOrderTotal(), $currency->iso_code );
-		$customer            = new Customer( (int) $params['cart']->id_customer );
-		$name                = $customer->firstname . ' ' . $customer->lastname;
-		$email               = $customer->email;
-		$customer_address    = new Address( (int) ( $params['cart']->id_address_delivery ) );
-		$telephone           = ! empty( $customer_address->phone ) ? $customer_address->phone : ( ! empty( $customer_address->phone_mobile ) ? $customer_address->phone_mobile : '' );
-		$address             = $customer_address->address1 . ', ' . $customer_address->address2 . ', ' . $customer_address->city . ', ' . $customer_address->country . ' - ' . $customer_address->postcode;
-		$ip                  = Tools::getRemoteAddr();
-		$locale              = $this->context->language->iso_code;
-		$platform_version    = _PS_VERSION_;
-		$ecommerce           = 'prestashop';
-		$module_version      = $this->version;
 
 		$redirect_url = $this->context->link->getModuleLink( self::MODULE_CODE, 'paymentreturn', array(), true, (int) $this->context->language->id );
 
 		if ( Configuration::get( 'PS_REWRITING_SETTINGS' ) == 1 ) {
 			$redirect_url = Tools::strReplaceFirst( '&', '?', $redirect_url );
 		}
+
+		$currency            = new Currency( (int) $params['cart']->id_currency );
+		$currency_code       = $currency->iso_code;
+		$customer            = new Customer( (int) $params['cart']->id_customer );
+		$name                = $customer->firstname . ' ' . $customer->lastname;
+		$email               = $customer->email;
+		$customer_address    = new Address( (int) ( $params['cart']->id_address_delivery ) );
+		$telephone           = $customer_address->phone ?? $customer_address->phone_mobile ?? '';
+		$address             = $customer_address->address1 . ', ' . $customer_address->address2 . ', ' . $customer_address->city . ', ' . $customer_address->country . ' - ' . $customer_address->postcode;
+
 
 		$this->context->smarty->assign( array(
 			'active_status'             	 => Configuration::get( self::PLUGIN_TRANSACTION_MODE ),
@@ -798,19 +790,18 @@ class LunarPayment extends PaymentModule {
 			'popup_title'                    => $popup_title,
 			'popup_description'              => $popup_description,
 			'currency_code'                  => $currency_code,
-			'amount'                         => $amount,
-			'exponent'                       => $this->getCurrencyByCode( $currency_code )['exponent'],
+			'amount'                         => $params['cart']->getOrderTotal(),
 			'id_cart'                        => json_encode( $params['cart']->id ),
 			'products'                       => str_replace("\u0022","\\\\\"",json_encode(  $products_array ,JSON_HEX_QUOT)),
 			'name'                           => $name,
 			'email'                          => $email,
 			'telephone'                      => $telephone,
 			'address'                        => $address,
-			'ip'                             => $ip,
-			'locale'                         => $locale,
-			'platform_version'               => $platform_version,
-			'ecommerce'                      => $ecommerce,
-			'module_version'                 => $module_version,
+			'ip'                             => Tools::getRemoteAddr(),
+			'locale'                         => $this->context->language->iso_code,
+			'platform_version'               => _PS_VERSION_,
+			'platform'                       => 'Prestashop',
+			'module_version'                 => $this->version,
 			'redirect_url'                   => $redirect_url,
 			'qry_str'                        => ( Configuration::get( 'PS_REWRITING_SETTINGS' ) ? '?' : '&' ),
 			'base_uri'                       => __PS_BASE_URI__,
@@ -825,6 +816,16 @@ class LunarPayment extends PaymentModule {
 		$payment_options = array( $newOption );
 
 		return $payment_options;
+	}
+
+	private function getTranslatedModuleConfig(string $key)
+	{
+		$language_code = Configuration::get( self::PLUGIN_LANGUAGE_CODE );
+		return ( ! empty( Configuration::get( $language_code . '_' . $key ) ) ) 
+					? Configuration::get( $language_code . '_' . $key ) 
+					: ( ! empty( Configuration::get( 'en_' . $key ) ) 
+							? Configuration::get( 'en_' . $key ) 
+							: '' );
 	}
 
 	/** PS 8 compatibility */
@@ -888,28 +889,6 @@ class LunarPayment extends PaymentModule {
 			return false;
 		}
 	}
-
-
-	////
-	////
-	////
-	////
-	////
-	////
-	public function getCurrencyMultiplier( $currency_iso_code ) {
-	}
-	public function getAmount( $total, $currency_iso_code ) {
-	}
-	public function getCurrencyByCode( $currency_iso_code ) {
-	}
-	////
-	////
-	////
-	////
-	////
-	////
-	////
-
 
 	public function hookDisplayAdminOrder( $params ) {
 		$id_order = $params['id_order'];
@@ -1224,11 +1203,10 @@ class LunarPayment extends PaymentModule {
 								);
 								$this->updateTransactionID( $transactionid, (int) $id_order, $fields );
 
-								$currency_multiplier = $this->getCurrencyMultiplier( $currency->iso_code );
 								/* Set message */
 								$message = 'Trx ID: ' . $transactionid . '
-								Authorized Amount: ' . ( $capture['transaction']['amount'] / $currency_multiplier ) . '
-								Captured Amount: ' . ( $capture['transaction']['capturedAmount'] / $currency_multiplier ) . '
+								Authorized Amount: ' . $capture['transaction']['amount'] . '
+								Captured Amount: ' . $capture['transaction']['capturedAmount'] . '
 								Order time: ' . $capture['transaction']['created'] . '
 								Currency code: ' . $capture['transaction']['currency'];
 
@@ -1320,7 +1298,7 @@ class LunarPayment extends PaymentModule {
 						);
 					} else {
 						/* Refund transaction */
-						$amount              = $this->getAmount($plugin_amount_to_refund, $currency->iso_code);
+						$amount              = $plugin_amount_to_refund;
 						$data                = array(
 							'descriptor' => '',
 							'amount'     => $amount,
@@ -1347,11 +1325,10 @@ class LunarPayment extends PaymentModule {
 								);
 								$this->updateTransactionID( $transactionid, (int) $id_order, $fields );
 
-								$currency_multiplier = $this->getCurrencyMultiplier( $currency->iso_code );
 								/* Set message */
 								$message = 'Trx ID: ' . $transactionid . '
-									Authorized Amount: ' . ( $refund['transaction']['amount'] / $currency_multiplier ) . '
-									Refunded Amount: ' . ( $refund['transaction']['refundedAmount'] / $currency_multiplier ) . '
+									Authorized Amount: ' . $refund['transaction']['amount'] . '
+									Refunded Amount: ' . $refund['transaction']['refundedAmount'] . '
 									Order time: ' . $refund['transaction']['created'] . '
 									Currency code: ' . $refund['transaction']['currency'];
 
@@ -1448,11 +1425,11 @@ class LunarPayment extends PaymentModule {
 							if($change_status){
 								$order->setCurrentState( (int) Configuration::get( 'PS_OS_CANCELED' ), $this->context->employee->id );
 							}
-							$currency_multiplier = $this->getCurrencyMultiplier( $currency->iso_code );
+
 							/* Set message */
 							$message = 'Trx ID: ' . $transactionid . '
-									Authorized Amount: ' . ( $void['transaction']['amount'] / $currency_multiplier ) . '
-									Refunded Amount: ' . ( $void['transaction']['refundedAmount'] / $currency_multiplier ) . '
+									Authorized Amount: ' . $void['transaction']['amount'] . '
+									Refunded Amount: ' . $void['transaction']['refundedAmount'] . '
 									Order time: ' . $void['transaction']['created'] . '
 									Currency code: ' . $void['transaction']['currency'];
 

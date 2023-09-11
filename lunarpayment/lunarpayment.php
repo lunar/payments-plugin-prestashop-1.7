@@ -24,10 +24,6 @@ use Lunar\Lunar as ApiClient;
  */
 class LunarPayment extends PaymentModule 
 {
-	const VENDOR_NAME = 'lunar';
-	const MODULE_CODE = 'lunarpayment';
-	const MODULE_VERSION = '1.0.0';
-
 	const PAYMENT_METHOD_STATUS = 'LUNAR_PAYMENT_METHOD_STATUS';
 	const TRANSACTION_MODE = 'LUNAR_TRANSACTION_MODE';
 	const LIVE_PUBLIC_KEY = 'LUNAR_LIVE_PUBLIC_KEY';
@@ -45,9 +41,9 @@ class LunarPayment extends PaymentModule
 	private $validationPublicKeys = ['live' => [], 'test' => []];
 
 	public function __construct() {
-		$this->name      = self::MODULE_CODE;
+		$this->name      = 'lunarpayment';
 		$this->tab       = 'payments_gateways';
-		$this->version   = self::MODULE_VERSION;
+		$this->version   = json_decode(file_get_contents(dirname(__DIR__) . '/composer.json'))->version;
 		$this->author    = 'Lunar';
 		$this->bootstrap = true;
 
@@ -158,8 +154,8 @@ class LunarPayment extends PaymentModule
 		$logos = Db::getInstance()->executes( $sql );
 
 		foreach ( $logos as $logo ) {
-			if ( file_exists( _PS_MODULE_DIR_ . self::MODULE_CODE . '/views/img/' . $logo['file_name'] ) ) {
-				unlink( _PS_MODULE_DIR_ . self::MODULE_CODE . '/views/img/' . $logo['file_name'] );
+			if ( file_exists( _PS_MODULE_DIR_ . $this->name . '/views/img/' . $logo['file_name'] ) ) {
+				unlink( _PS_MODULE_DIR_ . $this->name . '/views/img/' . $logo['file_name'] );
 			}
 		}
 
@@ -352,7 +348,7 @@ class LunarPayment extends PaymentModule
 		$fields_form = array(
 			'form' => array(
 				'legend' => array(
-					'title' => $this->l( ucfirst(self::VENDOR_NAME) . ' Payments Settings' ),
+					'title' => $this->l( 'Lunar Payments Settings' ),
 					'icon'  => 'icon-cogs'
 				),
 				'input'  => array(
@@ -715,7 +711,7 @@ class LunarPayment extends PaymentModule
 		$payment_method_desc  = $this->getTranslatedModuleConfig(self::PAYMENT_METHOD_DESC);
 		$shop_title          = $this->getTranslatedModuleConfig(self::SHOP_TITLE);
 
-		$redirect_url = $this->context->link->getModuleLink( self::MODULE_CODE, 'paymentreturn', array(), true, (int) $this->context->language->id );
+		$redirect_url = $this->context->link->getModuleLink( $this->name, 'paymentreturn', array(), true, (int) $this->context->language->id );
 
 		if ( Configuration::get( 'PS_REWRITING_SETTINGS' ) == 1 ) {
 			$redirect_url = Tools::strReplaceFirst( '&', '?', $redirect_url );
@@ -762,9 +758,9 @@ class LunarPayment extends PaymentModule
 		) );
 
 		$newOption = new PaymentOption();
-		$newOption->setModuleName( self::MODULE_CODE )
+		$newOption->setModuleName( $this->name )
 		          ->setCallToActionText( $this->trans( $payment_method_title, array() ) )
-		          ->setAction( $this->context->link->getModuleLink( self::MODULE_CODE, 'validation', array(), true ) )
+		          ->setAction( $this->context->link->getModuleLink( $this->name, 'validation', array(), true ) )
 		          ->setAdditionalInformation( $this->display( __FILE__, 'views/templates/hook/payment.tpl' ) );
 		$payment_options = array( $newOption );
 
@@ -792,7 +788,7 @@ class LunarPayment extends PaymentModule
 	}
 
 	private function paymentReturn( $params ) {
-		if ( ! $this->active || ! isset( $params['objOrder'] ) || $params['objOrder']->module != self::MODULE_CODE ) {
+		if ( ! $this->active || ! isset( $params['objOrder'] ) || $params['objOrder']->module != $this->name ) {
 			return false;
 		}
 
@@ -847,7 +843,7 @@ class LunarPayment extends PaymentModule
 		$id_order = $params['id_order'];
 		$order    = new Order( (int) $id_order );
 
-		if ( $order->module == self::MODULE_CODE ) {
+		if ( $order->module == $this->name ) {
 			$order_token        = Tools::getAdminToken( 'AdminOrders' . (int)  Tab::getIdFromClassName('AdminOrders') . (int) $this->context->employee->id );
 			$dbModuleTransaction = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . 'lunar_admin WHERE order_id = ' . (int) $id_order );
 			$this->context->smarty->assign( array(
@@ -865,7 +861,7 @@ class LunarPayment extends PaymentModule
 
 	public function displayErrors( $string = 'Fatal error', $htmlentities = true, Context $context = null ) {
 		if ( true ) {
-			return ( Tools::htmlentitiesUTF8( ucfirst(self::VENDOR_NAME) . ': ' . stripslashes( $string ) ) . '<br/>' );
+			return ( Tools::htmlentitiesUTF8( 'Lunar: ' . stripslashes( $string ) ) . '<br/>' );
 		}
 
 		return Context::getContext()->getTranslator()->trans( 'Fatal error', array(), 'Admin.Notifications.Error' );
@@ -873,7 +869,7 @@ class LunarPayment extends PaymentModule
 
 	public function hookActionOrderSlipAdd( $params ){
 		/* Check if "Refund" checkbox is checked */
-		if (Tools::isSubmit('doRefund' .  ucfirst(self::VENDOR_NAME))) {
+		if (Tools::isSubmit('doRefundLunar')) {
 			$id_order = $params['order']->id;
 			$amount = 0;
 
@@ -1018,7 +1014,7 @@ class LunarPayment extends PaymentModule
 			}
 
 			if ( ! empty( $_FILES['logo_file']['name'] ) ) {
-				$target_dir    = _PS_MODULE_DIR_ . self::MODULE_CODE . '/views/img/';
+				$target_dir    = _PS_MODULE_DIR_ . $this->name . '/views/img/';
 				$name          = basename( $_FILES['logo_file']["name"] );
 				$path_parts    = pathinfo( $name );
 				$extension     = $path_parts['extension'];
@@ -1097,7 +1093,7 @@ class LunarPayment extends PaymentModule
 			Tools::redirectAdmin( $link );
 		}
 
-		if ( Tools::getValue( 'configure' ) == self::MODULE_CODE ) {
+		if ( Tools::getValue( 'configure' ) == $this->name ) {
 			$this->context->controller->addCSS( $this->_path . 'views/css/backoffice.css' );
 		}
 	}

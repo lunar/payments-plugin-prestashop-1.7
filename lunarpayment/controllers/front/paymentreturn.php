@@ -15,8 +15,6 @@ use Lunar\Lunar as ApiClient;
  */
 class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontController {
 
-
-
 	public function __construct() {
 		parent::__construct();
 		$this->display_column_right = false;
@@ -143,7 +141,7 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 				) );
 
 				return $this->setTemplate( 'module:lunarpayment/views/templates/front/payment_error.tpl' );
-				
+
 			} elseif ( ! empty( $capture['transaction'] ) ) {
 
 				$total = $capture['transaction']['amount'];

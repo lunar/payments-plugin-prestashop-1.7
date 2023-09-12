@@ -91,7 +91,7 @@ class LunarPayment extends PaymentModule
 
 	public function installDb() {
 		return (
-			Db::getInstance()->Execute( 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . "lunar_admin` (
+			Db::getInstance()->Execute( 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . "lunar_transactions` (
                 `id`				INT(11) NOT NULL AUTO_INCREMENT,
                 `lunar_tid`			VARCHAR(255) NOT NULL,
                 `order_id`			INT(11) NOT NULL,
@@ -172,7 +172,7 @@ class LunarPayment extends PaymentModule
 
 		return (
 			parent::uninstall()
-			&& Db::getInstance()->Execute( 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . "lunar_admin`" )
+			&& Db::getInstance()->Execute( 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . "lunar_transactions`" )
 			&& Db::getInstance()->Execute( 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . "lunar_logos`" )
 			&& Configuration::deleteByName( self::PAYMENT_METHOD_STATUS )
 			&& Configuration::deleteByName( self::TRANSACTION_MODE )
@@ -830,7 +830,7 @@ class LunarPayment extends PaymentModule
 	}
 
 	public function storeTransactionID( $plugin_id_transaction, $order_id, $total, $captured = 'NO' ) {
-		$query = 'INSERT INTO ' . _DB_PREFIX_ . 'lunar_admin (`'
+		$query = 'INSERT INTO ' . _DB_PREFIX_ . 'lunar_transactions (`'
 					. 'lunar_tid`, `order_id`, `payed_amount`, `payed_at`, `captured`) VALUES ("'
 					. pSQL( $plugin_id_transaction ) . '", "' . pSQL( $order_id ) . '", "' . pSQL( $total ) . '" , NOW(), "' . pSQL( $captured ) . '")';
 
@@ -852,7 +852,7 @@ class LunarPayment extends PaymentModule
 				}
 			}
 
-			$query = 'UPDATE ' . _DB_PREFIX_ . 'lunar_admin SET ' . $fieldsStr
+			$query = 'UPDATE ' . _DB_PREFIX_ . 'lunar_transactions SET ' . $fieldsStr
 						. ' WHERE `' . 'lunar_tid`="' . pSQL( $plugin_id_transaction )
 						. '" AND `order_id`="' . (int)$order_id . '"';
 
@@ -868,7 +868,7 @@ class LunarPayment extends PaymentModule
 
 		if ( $order->module == $this->name ) {
 			$order_token = Tools::getAdminToken( 'AdminOrders' . (int)  Tab::getIdFromClassName('AdminOrders') . (int) $this->context->employee->id );
-			$dbModuleTransaction = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . 'lunar_admin WHERE order_id = ' . (int) $id_order );
+			$dbModuleTransaction = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . 'lunar_transactions WHERE order_id = ' . (int) $id_order );
 			$this->context->smarty->assign( array(
 				'ps_version'         			  => _PS_VERSION_,
 				'id_order'           			  => $id_order,
@@ -938,7 +938,7 @@ class LunarPayment extends PaymentModule
 		$id_order    = $params['id_order'];
 
 		/* Skip if no module transaction */
-		$dbModuleTransaction = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . 'lunar_admin WHERE order_id = ' . (int) $id_order );
+		$dbModuleTransaction = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . 'lunar_transactions WHERE order_id = ' . (int) $id_order );
 		if ( empty( $dbModuleTransaction ) ) {
 			return false;
 		}
@@ -1133,7 +1133,7 @@ class LunarPayment extends PaymentModule
 	 */
 	 protected function doPaymentAction($id_order, $plugin_action, $change_status = false, $plugin_amount_to_refund = 0){
 		$order                 = new Order( (int) $id_order );
-		$dbModuleTransaction   = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . "lunar_admin WHERE order_id = " . (int) $id_order );
+		$dbModuleTransaction   = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . "lunar_transactions WHERE order_id = " . (int) $id_order );
 		$isTransactionCaptured = $dbModuleTransaction['captured'] == 'YES';
 		$transactionId         = $dbModuleTransaction["lunar_tid"];
 

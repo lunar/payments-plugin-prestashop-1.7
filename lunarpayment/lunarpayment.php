@@ -44,7 +44,7 @@ class LunarPayment extends PaymentModule
 	public function __construct() {
 		$this->name      = 'lunarpayment';
 		$this->tab       = 'payments_gateways';
-		$this->version   = json_decode(file_get_contents(dirname(__DIR__) . '/composer.json'))->version;
+		$this->version   = json_decode(file_get_contents(__DIR__ . '/composer.json'))->version;
 		$this->author    = 'Lunar';
 		$this->bootstrap = true;
 
@@ -54,7 +54,7 @@ class LunarPayment extends PaymentModule
 		$this->displayName      = 'Lunar';
 		$this->description      = $this->l( 'Receive payments with Lunar' );
 		$this->confirmUninstall = $this->l( 'Are you sure about removing Lunar?' );
-		
+
 		parent::__construct();
 	}
 
@@ -268,7 +268,7 @@ class LunarPayment extends PaymentModule
 			// }
 
 			
-			Configuration::updateValue( self::LANGUAGE_CODE, $language_code );
+			Configuration::updateValue( 'LUNAR_LANGUAGE_CODE', $language_code );
 
 			Configuration::updateValue( self::PAYMENT_METHOD_STATUS, Tools::getValue( self::PAYMENT_METHOD_STATUS ) );
 			Configuration::updateValue( self::TRANSACTION_MODE, $transactionMode );
@@ -296,12 +296,11 @@ class LunarPayment extends PaymentModule
 			}
 		}
 
-		// $html = $this->renderForm() . $this->getModalForAddMoreLogo();
-		
+	
 		$this->context->controller->addJS( $this->_path . 'views/js/backoffice.js' );
 		
 		//Get configuration form
-		return $this->renderForm() . $this->getModalForAddMoreLogo();
+		return $this->renderForm(); // . $this->getModalForAddMoreLogo(); // disabled for the moment because of an error
 	}
 
 	public function renderForm() {
@@ -601,7 +600,7 @@ class LunarPayment extends PaymentModule
 			$language_code . '_' . self::PAYMENT_METHOD_TITLE => $payment_method_title,
 			$language_code . '_' . self::PAYMENT_METHOD_DESC  => $payment_method_desc,
 			$language_code . '_' . self::SHOP_TITLE           => $shop_title,
-			self::ACCEPTED_CARDS . '[]' => $acceptedCards,
+			self::ACCEPTED_CARDS . '[]'  => $acceptedCards,
 		);
 	}
 
@@ -857,7 +856,7 @@ class LunarPayment extends PaymentModule
 		$order    = new Order( (int) $id_order );
 
 		if ( $order->module == $this->name ) {
-			$order_token        = Tools::getAdminToken( 'AdminOrders' . (int)  Tab::getIdFromClassName('AdminOrders') . (int) $this->context->employee->id );
+			$order_token = Tools::getAdminToken( 'AdminOrders' . (int)  Tab::getIdFromClassName('AdminOrders') . (int) $this->context->employee->id );
 			$dbModuleTransaction = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . 'lunar_admin WHERE order_id = ' . (int) $id_order );
 			$this->context->smarty->assign( array(
 				'ps_version'         			  => _PS_VERSION_,

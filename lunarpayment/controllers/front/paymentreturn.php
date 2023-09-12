@@ -58,12 +58,12 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 		$status_paid = (int) Configuration::get( $this->module::ORDER_STATUS );
 		// $status_paid = Configuration::get('PS_OS_PAYMENT');
 
-		$transactionid = Tools::getValue( 'transactionid' );
+		$transactionId = Tools::getValue( 'transactionid' );
 
 		$transaction_failed = false;
 
 		if ( Configuration::get( $this->module::CHECKOUT_MODE ) == 'delayed' ) {
-			$fetch = $apiClient->payments()->fetch( $transactionid );
+			$fetch = $apiClient->payments()->fetch( $transactionId );
 
 			if ( is_array( $fetch ) && isset( $fetch['error'] ) && $fetch['error'] == 1 ) {
 				PrestaShopLogger::addLog( $fetch['message'] );
@@ -78,13 +78,13 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 
 				$total = $fetch['transaction']['amount'];
 
-				$message = 'Trx ID: ' . $transactionid . '
+				$message = 'Trx ID: ' . $transactionId . '
                     Authorized Amount: ' . $total . '
                     Captured Amount: ' . $fetch['transaction']['capturedAmount'] . '
                     Order time: ' . $fetch['transaction']['created'] . '
                     Currency code: ' . $fetch['transaction']['currency'];
 					
-				if ( $this->module->validateOrder( (int) $cart->id, 2, $total, $this->module->displayName, $message, array('transaction_id' => $transactionid), null, false, $customer->secure_key ) ) {
+				if ( $this->module->validateOrder( (int) $cart->id, 2, $total, $this->module->displayName, $message, array('transaction_id' => $transactionId), null, false, $customer->secure_key ) ) {
 
 					if ( Validate::isCleanHtml( $message ) ) {
 						if ( $this->module->getPSV() == '1.7.2' ) {
@@ -115,12 +115,12 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 						}
 					}
 
-					$this->module->storeTransactionID( $transactionid, $this->module->currentOrder, $total, $captured = 'NO' );
+					$this->module->storeTransactionID( $transactionId, $this->module->currentOrder, $total, $captured = 'NO' );
 
 					Tools::redirectLink( __PS_BASE_URI__ . 'index.php?controller=order-confirmation&id_cart=' . $cart->id . '&id_module=' . $this->module->id . '&id_order=' . $this->module->currentOrder . '&key=' . $customer->secure_key );
 				} else {
 					$transaction_failed = true;
-					$apiClient->payments()->cancel( $transactionid, array( 'amount' => $total ) ); //Cancel Order
+					$apiClient->payments()->cancel( $transactionId, array( 'amount' => $total ) ); //Cancel Order
 				}
 			} else {
 				$transaction_failed = true;
@@ -131,7 +131,7 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 				'currency'   => $currency->iso_code,
 				'amount'     => $cart_amount,
 			);
-			$capture = $apiClient->payments()->capture( $transactionid, $data );
+			$capture = $apiClient->payments()->capture( $transactionId, $data );
 
 			if ( is_array( $capture ) && ! empty( $capture['error'] ) && $capture['error'] == 1 ) {
 				PrestaShopLogger::addLog( $capture['message'] );
@@ -146,9 +146,9 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 
 				$total = $capture['transaction']['amount'];
 
-				$validOrder = $this->module->validateOrder( (int) $cart->id, $status_paid, $total, $this->module->displayName, null, array('transaction_id' => $transactionid), null, false, $customer->secure_key );
+				$validOrder = $this->module->validateOrder( (int) $cart->id, $status_paid, $total, $this->module->displayName, null, array('transaction_id' => $transactionId), null, false, $customer->secure_key );
 
-				$message = 'Trx ID: ' . $transactionid . '
+				$message = 'Trx ID: ' . $transactionId . '
                     Authorized Amount: ' . $total . '
                     Captured Amount: ' . $capture['transaction']['capturedAmount'] . '
                     Order time: ' . $capture['transaction']['created'] . '
@@ -191,7 +191,7 @@ class LunarpaymentPaymentReturnModuleFrontController extends ModuleFrontControll
 					}
 				}
 
-				$this->module->storeTransactionID( $transactionid, $this->module->currentOrder, $total, $captured = 'YES' );
+				$this->module->storeTransactionID( $transactionId, $this->module->currentOrder, $total, $captured = 'YES' );
 				$redirectLink = __PS_BASE_URI__ . 'index.php?controller=order-confirmation&id_cart=' . $cart->id . '&id_module=' . $this->module->id . '&id_order=' . $this->module->currentOrder . '&key=' . $customer->secure_key;
 				Tools::redirectLink( $redirectLink );
 			} else {

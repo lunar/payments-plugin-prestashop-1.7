@@ -14,6 +14,12 @@ $(document).ready(function () {
     $(`.lunar-language`).bind('change', moduleLanguageChange);
     $('#logo_form').on('submit', ajaxSaveLogo);
 
+    /** Hide or show TEST inputs on module configuration page */
+    if ("debug" !== document.location.search.match(/debug/gi)?.toString() && "live" === $(`#LUNAR_TRANSACTION_MODE`).val()) {
+        $(`#LUNAR_TRANSACTION_MODE`).closest(".form-group").hide();
+        $(`#LUNAR_TEST_SECRET_KEY`).closest(".form-group").hide();
+        $(`#LUNAR_TEST_PUBLIC_KEY`).closest(".form-group").hide();
+    }
 });
 
 function moduleLanguageChange(e) {
@@ -23,16 +29,17 @@ function moduleLanguageChange(e) {
 
 function ajaxSaveLogo(e) {
     e.preventDefault();
+
     $('#save_logo').button('loading');
     $('#alert').html("").hide();
-    var url = $('#logo_form').attr('action');
-    url = url + "&token=" + lunarpayment.tok;
+
+    let uploadLogoUrl = $('#logo_form').attr('action') + "&token=" + lunarpayment.tok;
 
     //grab all form data
     var formData = new FormData($(this)[0]);
     //formData.append("token", token);
     $.ajax({
-        url: url,
+        url: uploadLogoUrl,
         type: 'POST',
         data: formData,
         dataType: 'json',
@@ -58,27 +65,13 @@ function ajaxSaveLogo(e) {
                     .removeClass('alert-danger')
                     .addClass('alert-success');
 
-                window.location = window.location;
+                window.location.reload();
             }
         },
-        error: function (response) {
-            console.log(response);
+        error: function (error) {
+            console.error(error);
         },
     });
 
     return false;
-}
-
-$(function() {
-    /** Triggers for hide/show LIVE/TEST INPUTS */
-    $(document).ready(checkTransactionMode);
-});
-
-/** Function to hide or show LIVE/TEST inputs on module configuration page */
-function checkTransactionMode() {
-    if ("debug" !== document.location.search.match(/debug/gi)?.toString() && "live" === $(`#LUNAR_TRANSACTION_MODE`).val()) {
-        $(`#LUNAR_TRANSACTION_MODE`).closest(".form-group").hide();
-        $(`#LUNAR_TEST_SECRET_KEY`).closest(".form-group").hide();
-        $(`#LUNAR_TEST_PUBLIC_KEY`).closest(".form-group").hide();
-    }
 }

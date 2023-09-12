@@ -683,6 +683,14 @@ class LunarPayment extends PaymentModule
 		return $this->display( __FILE__, 'views/templates/admin/modal.tpl' );
 	}
 
+	/**
+     * @param $params
+     *
+     * @return array
+     *
+     * @throws Exception
+     * @throws SmartyException
+	 */
 	public function hookPaymentOptions( $params ) {
 		//ensure plugin key is set
 		if ( Configuration::get( self::TRANSACTION_MODE ) == 'test' ) {
@@ -794,11 +802,14 @@ class LunarPayment extends PaymentModule
 		return $this->paymentReturn($params);
 	}
 
-		/** PS 1.7 compatibility */
+	/** PS 1.7 compatibility */
 	public function hookPaymentReturn( $params ) {
 		return $this->paymentReturn($params);
 	}
 
+	/**
+	 * 
+	 */
 	private function paymentReturn( $params ) {
 		if ( ! $this->active || ! isset( $params['objOrder'] ) || $params['objOrder']->module != $this->name ) {
 			return false;
@@ -932,7 +943,7 @@ class LunarPayment extends PaymentModule
 			return false;
 		}
 
-		/* If Capture or Void */
+		/* If Capture or Cancel */
 		if ( $order_state->id == (int) Configuration::get( self::ORDER_STATUS ) || $order_state->id == (int) Configuration::get( 'PS_OS_CANCELED' ) ) {
 			/* If custom Captured status  */
 			if ( $order_state->id == (int) Configuration::get( self::ORDER_STATUS ) ) {
@@ -941,7 +952,7 @@ class LunarPayment extends PaymentModule
 
 			/* If Canceled status */
 			if ( $order_state->id == (int) Configuration::get( 'PS_OS_CANCELED' ) ) {
-				$response = $this->doPaymentAction($id_order,"void");
+				$response = $this->doPaymentAction($id_order,"cancel");
 			}
 
 			/* Log response */
@@ -1115,34 +1126,37 @@ class LunarPayment extends PaymentModule
 	 *
 	 * @param string $id_order - the order id
 	 * @param string $plugin_action - the action to be called.
-	 * @param boolean $change_status - change status flag, default false.
-	 * @param float $plugin_amount_to_refund - the refund amount, default 0.
+	 * @param boolean $change_status - change status flag
+	 * @param float $plugin_amount_to_refund - the refund amount
 	 *
 	 * @return mixed
 	 */
 	 protected function doPaymentAction($id_order, $plugin_action, $change_status = false, $plugin_amount_to_refund = 0){
-		$order              = new Order( (int) $id_order );
-		$dbModuleTransaction = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . "lunar_admin WHERE order_id = " . (int) $id_order );
-		$transactionId      = $dbModuleTransaction["lunar_tid"];
+		$order                 = new Order( (int) $id_order );
+		$dbModuleTransaction   = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . "lunar_admin WHERE order_id = " . (int) $id_order );
+		$isTransactionCaptured = $dbModuleTransaction['captured'] == 'YES';
+		$transactionId         = $dbModuleTransaction["lunar_tid"];
 
 		$secretKey = Configuration::get( self::TRANSACTION_MODE ) == 'live'
 						? Configuration::get( self::LIVE_SECRET_KEY )
 						: Configuration::get( self::TEST_SECRET_KEY );
 
-		$apiClient = new Lunar( $secretKey );
-		$fetch    			= $apiClient->payments()->fetch( $transactionId );
-		$customer 			= new Customer( $order->id_customer );
+		$apiClient = new ApiClient( $secretKey );
+
+		$fetch    = $apiClient->payments()->fetch( $transactionId );
+		$customer = new Customer( $order->id_customer );
+		$currency = new Currency( (int) $order->id_currency );
 
 		switch ( $plugin_action ) {
 			case "capture":
-				if ( $dbModuleTransaction['captured'] == 'YES' ) {
+				if ( $isTransactionCaptured ) {
 					$response = array(
 						'warning' => 1,
 						'message' => $this->displayErrors( $this->l('Transaction already Captured.') ),
 					);
 				} elseif ( isset( $dbModuleTransaction ) ) {
 					$amount   = ( ! empty( $fetch['transaction']['pendingAmount'] ) ) ? (int) $fetch['transaction']['pendingAmount'] : 0;
-					$currency = new Currency( (int) $order->id_currency );
+
 					if ( $amount ) {
 						/* Capture transaction */
 						$data    = array(
@@ -1173,10 +1187,10 @@ class LunarPayment extends PaymentModule
 
 								/* Set message */
 								$message = 'Trx ID: ' . $transactionId . '
-								Authorized Amount: ' . $capture['transaction']['amount'] . '
-								Captured Amount: ' . $capture['transaction']['capturedAmount'] . '
-								Order time: ' . $capture['transaction']['created'] . '
-								Currency code: ' . $capture['transaction']['currency'];
+											Authorized Amount: ' . $capture['transaction']['amount'] . '
+											Captured Amount: ' . $capture['transaction']['capturedAmount'] . '
+											Order time: ' . $capture['transaction']['created'] . '
+											Currency code: ' . $capture['transaction']['currency'];
 
 								$message = strip_tags( $message, '<br>' );
 								$this->maybeAddOrderMessage($message, $customer, $order);
@@ -1216,14 +1230,12 @@ class LunarPayment extends PaymentModule
 				break;
 
 			case "refund":
-				if ( $dbModuleTransaction['captured'] == 'NO' ) {
+				if ( ! $isTransactionCaptured ) {
 					$response = array(
 						'warning' => 1,
 						'message' => $this->displayErrors( $this->l('You need to Captured Transaction prior to Refund.') ),
 					);
 				} elseif ( isset( $dbModuleTransaction ) ) {
-
-					$currency = new Currency( (int) $order->id_currency );
 
 					if ( ! Validate::isPrice( $plugin_amount_to_refund ) ) {
 						$response = array(
@@ -1261,10 +1273,10 @@ class LunarPayment extends PaymentModule
 
 								/* Set message */
 								$message = 'Trx ID: ' . $transactionId . '
-									Authorized Amount: ' . $refund['transaction']['amount'] . '
-									Refunded Amount: ' . $refund['transaction']['refundedAmount'] . '
-									Order time: ' . $refund['transaction']['created'] . '
-									Currency code: ' . $refund['transaction']['currency'];
+											Authorized Amount: ' . $refund['transaction']['amount'] . '
+											Refunded Amount: ' . $refund['transaction']['refundedAmount'] . '
+											Order time: ' . $refund['transaction']['created'] . '
+											Currency code: ' . $refund['transaction']['currency'];
 
 								$message = strip_tags( $message, '<br>' );
 								$this->maybeAddOrderMessage($message, $customer, $order);
@@ -1299,13 +1311,13 @@ class LunarPayment extends PaymentModule
 				break;
 
 			case "cancel":
-				if ( $dbModuleTransaction['captured'] == 'YES' ) {
+				if ( $isTransactionCaptured ) {
 					$response = array(
 						'warning' => 1,
 						'message' => $this->displayErrors( $this->l('You can\'t Cancel transaction now . It\'s already Captured, try to Refund.') ),
 					);
 				} elseif ( isset( $dbModuleTransaction ) ) {
-					$currency = new Currency( (int) $order->id_currency );
+
 					/* Cancel transaction */
 					$amount = (int) $fetch['transaction']['amount'] - $fetch['transaction']['refundedAmount'];
 					$data   = array(
@@ -1329,10 +1341,10 @@ class LunarPayment extends PaymentModule
 
 							/* Set message */
 							$message = 'Trx ID: ' . $transactionId . '
-									Authorized Amount: ' . $cancel['transaction']['amount'] . '
-									Refunded Amount: ' . $cancel['transaction']['refundedAmount'] . '
-									Order time: ' . $cancel['transaction']['created'] . '
-									Currency code: ' . $cancel['transaction']['currency'];
+										Authorized Amount: ' . $cancel['transaction']['amount'] . '
+										Refunded Amount: ' . $cancel['transaction']['refundedAmount'] . '
+										Order time: ' . $cancel['transaction']['created'] . '
+										Currency code: ' . $cancel['transaction']['currency'];
 
 							$message = strip_tags( $message, '<br>' );
 							$this->maybeAddOrderMessage($message, $customer, $order);
@@ -1372,7 +1384,7 @@ class LunarPayment extends PaymentModule
 	 */
 	private function maybeAddOrderMessage(string $message, Customer $customer, Order $order)
 	{
-		if ( Validate::isCleanHtml( $message ) ) {
+		if ( ! Validate::isCleanHtml( $message ) ) {
 			return;
 		}
 

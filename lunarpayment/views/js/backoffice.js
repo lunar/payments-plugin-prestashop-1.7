@@ -1,9 +1,9 @@
 
 $(document).ready(function () {
-    var html = '<a href="#" class="add-more-btn" data-toggle="modal" data-target="#logoModal"><i class="process-icon-plus" data-toggle="tooltip" title="Add your own logo"></i></a>';
-    $(`select[name="LUNAR_ACCEPTED_CARDS[]"]`).parent('div').append(html);
-
-    $('[data-toggle="tooltip"]').tooltip();
+    // temporary disabled
+    // var html = '<a href="#" class="add-more-btn" data-toggle="modal" data-target="#logoModal"><i class="process-icon-plus" data-toggle="tooltip" title="Add your own logo"></i></a>';
+    // $(`select[name="LUNAR_ACCEPTED_CARDS[]"]`).parent('div').append(html);
+    // $('[data-toggle="tooltip"]').tooltip();
 
     $(`.lunar-config`).each(function (index, item) {
         if ($(item).hasClass('has-error')) {

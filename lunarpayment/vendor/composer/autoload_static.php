@@ -9,11 +9,16 @@ class ComposerStaticInit15ac80d9eec6bcbbcbdcec5f1b390a9f
     public static $prefixLengthsPsr4 = array (
         'L' => 
         array (
+            'Lunar\\Payment\\' => 14,
             'Lunar\\' => 6,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
+        'Lunar\\Payment\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/',
+        ),
         'Lunar\\' => 
         array (
             0 => __DIR__ . '/..' . '/lunar/payments-api-sdk/src',

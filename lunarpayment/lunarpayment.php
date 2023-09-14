@@ -14,33 +14,23 @@ if ( ! defined( '_PS_VERSION_' ) ) {
 
 require_once __DIR__.'/vendor/autoload.php';
 
-use PrestaShop\PrestaShop\Core\Payment\PaymentOption;
 
 use Lunar\Exception\ApiException;
 use Lunar\Lunar as ApiClient;
+use Lunar\Payment\methods\LunarCardsMethod;
+use Lunar\Payment\methods\LunarMobilePayMethod;
 
 /**
  * 
  */
 class LunarPayment extends PaymentModule 
 {
-	// const LANGUAGE_CODE = 'LUNAR_LANGUAGE_CODE';
-	const PAYMENT_METHOD_STATUS = 'LUNAR_PAYMENT_METHOD_STATUS';
-	const TRANSACTION_MODE = 'LUNAR_TRANSACTION_MODE';
-	const LIVE_PUBLIC_KEY = 'LUNAR_LIVE_PUBLIC_KEY';
-	const LIVE_SECRET_KEY = 'LUNAR_LIVE_SECRET_KEY';
-	const TEST_PUBLIC_KEY = 'LUNAR_TEST_PUBLIC_KEY';
-	const TEST_SECRET_KEY = 'LUNAR_TEST_SECRET_KEY';
-	const LOGO_URL = 'LUNAR_LOGO_URL';
-	const CHECKOUT_MODE = 'LUNAR_CHECKOUT_MODE';
-	const ORDER_STATUS = 'LUNAR_ORDER_STATUS';
-	const PAYMENT_METHOD_DESC = 'LUNAR_PAYMENT_METHOD_DESC';
-	const PAYMENT_METHOD_TITLE = 'LUNAR_PAYMENT_METHOD_TITLE';
-	const SHOP_TITLE = 'LUNAR_SHOP_TITLE';
-	const ACCEPTED_CARDS = 'LUNAR_ACCEPTED_CARDS';
+	private LunarCardsMethod $cardsPayment;
+	private LunarMobilePayMethod $mobilePayPayment;
 
-	// private $validationPublicKeys = ['live' => [], 'test' => []];
-
+	/**
+	 * 
+	 */
 	public function __construct() {
 		$this->name      = 'lunarpayment';
 		$this->tab       = 'payments_gateways';
@@ -57,40 +47,29 @@ class LunarPayment extends PaymentModule
 		$this->confirmUninstall = $this->l( 'Are you sure about removing Lunar?' );
 
 		parent::__construct();
+
+		$this->cardsPayment = new LunarCardsMethod($this);
+		$this->mobilePayPayment = new LunarMobilePayMethod($this);
 	}
 
-	public function install() {
-		$shop_title   = ( ! empty( Configuration::get( 'PS_SHOP_NAME' ) ) ) ? Configuration::get( 'PS_SHOP_NAME' ) : 'Payment';
-		// $language_code = $this->context->language->iso_code;
-
-		// Configuration::updateValue( self::LANGUAGE_CODE, $language_code );
-		Configuration::updateValue( self::PAYMENT_METHOD_STATUS, 'enabled' );
-		Configuration::updateValue( self::TRANSACTION_MODE, 'live' ); // defaults to live mode
-		Configuration::updateValue( self::TEST_SECRET_KEY, '' );
-		Configuration::updateValue( self::TEST_PUBLIC_KEY, '' );
-		Configuration::updateValue( self::LIVE_SECRET_KEY, '' );
-		Configuration::updateValue( self::LIVE_PUBLIC_KEY, '' );
-		Configuration::updateValue( self::LOGO_URL, '' );
-		Configuration::updateValue( self::CHECKOUT_MODE, 'delayed' );
-		Configuration::updateValue( self::ORDER_STATUS, Configuration::get( self::ORDER_STATUS ) );
-		Configuration::updateValue( self::PAYMENT_METHOD_TITLE, 'Cards' );
-		Configuration::updateValue( self::PAYMENT_METHOD_DESC, 'Secure payment with card via © Lunar' );
-		Configuration::updateValue( self::SHOP_TITLE, $shop_title );
-		Configuration::updateValue( self::ACCEPTED_CARDS, 'visa.svg,visa-electron.svg,mastercard.svg,mastercard-maestro.svg' );
-		// Configuration::updateValue( $language_code . '_' . self::PAYMENT_METHOD_TITLE, 'Cards' );
-		// Configuration::updateValue( $language_code . '_' . self::PAYMENT_METHOD_DESC, 'Secure payment with card via © Lunar' );
-		// Configuration::updateValue( $language_code . '_' . self::SHOP_TITLE, $shop_title );
-
-		return ( parent::install()
-					&& $this->registerHook( 'payment' )
-					&& $this->registerHook( 'paymentOptions' )
-					&& (version_compare(_PS_VERSION_, '8', '<') ? $this->registerHook( 'paymentReturn' ) : $this->registerHook( 'displayPaymentReturn' ))
-					&& $this->registerHook( 'DisplayAdminOrder' )
-					&& (version_compare(_PS_VERSION_, '8', '<') ? $this->registerHook( 'BackOfficeHeader' ) : $this->registerHook( 'displayBackOfficeHeader' ))
-					&& $this->registerHook( 'actionOrderStatusPostUpdate' )
-					&& $this->registerHook( 'actionOrderSlipAdd' )
-					&& $this->createDbTables()
-				);
+	/**
+	 * 
+	 */
+	public function install() 
+	{
+		return ( 
+			parent::install()
+			&& $this->registerHook( 'payment' )
+			&& $this->registerHook( 'paymentOptions' )
+			&& (version_compare(_PS_VERSION_, '8', '<') ? $this->registerHook( 'paymentReturn' ) : $this->registerHook( 'displayPaymentReturn' ))
+			&& $this->registerHook( 'DisplayAdminOrder' )
+			&& (version_compare(_PS_VERSION_, '8', '<') ? $this->registerHook( 'BackOfficeHeader' ) : $this->registerHook( 'displayBackOfficeHeader' ))
+			&& $this->registerHook( 'actionOrderStatusPostUpdate' )
+			&& $this->registerHook( 'actionOrderSlipAdd' )
+			&& $this->createDbTables()
+			&& $this->cardsPayment->install()
+			&& $this->mobilePayPayment->install()
+		);
 	}
 
 	public function createDbTables() {
@@ -152,46 +131,14 @@ class LunarPayment extends PaymentModule
 		);
 	}
 
-	public function uninstall() {
-		$sql = new DbQuery();
-		$sql->select( '*' );
-		$sql->from( "lunar_logos", 'PL' );
-		$sql->where( 'PL.default_logo != 1' );
-		$logos = Db::getInstance()->executes( $sql );
-
-		foreach ( $logos as $logo ) {
-			if ( file_exists( _PS_MODULE_DIR_ . $this->name . '/views/img/' . $logo['file_name'] ) ) {
-				unlink( _PS_MODULE_DIR_ . $this->name . '/views/img/' . $logo['file_name'] );
-			}
-		}
-
-		//Fetch all languages and delete plugin configurations which has language iso_code as prefix
-		// $languages = Language::getLanguages( true, $this->context->shop->id );
-		// foreach ( $languages as $language ) {
-		// 	$language_code = $language['iso_code'];
-		// 	Configuration::deleteByName( $language_code . '_' . self::PAYMENT_METHOD_TITLE );
-		// 	Configuration::deleteByName( $language_code . '_' . self::PAYMENT_METHOD_DESC );
-		// 	Configuration::deleteByName( $language_code . '_' . self::SHOP_TITLE );
-		// }
-
+	public function uninstall()
+	{
 		return (
 			parent::uninstall()
 			&& Db::getInstance()->execute( 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . "lunar_transactions`" )
 			&& Db::getInstance()->execute( 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . "lunar_logos`" )
-			// && Configuration::deleteByName( self::LANGUAGE_CODE )
-			&& Configuration::deleteByName( self::PAYMENT_METHOD_STATUS )
-			&& Configuration::deleteByName( self::TRANSACTION_MODE )
-			&& Configuration::deleteByName( self::TEST_SECRET_KEY )
-			&& Configuration::deleteByName( self::TEST_PUBLIC_KEY )
-			&& Configuration::deleteByName( self::LIVE_SECRET_KEY )
-			&& Configuration::deleteByName( self::LIVE_PUBLIC_KEY )
-			&& Configuration::deleteByName( self::LOGO_URL )
-			&& Configuration::deleteByName( self::CHECKOUT_MODE )
-			&& Configuration::deleteByName( self::ORDER_STATUS )
-			&& Configuration::deleteByName( self::PAYMENT_METHOD_TITLE )
-			&& Configuration::deleteByName( self::PAYMENT_METHOD_DESC )
-			&& Configuration::deleteByName( self::SHOP_TITLE )
-			&& Configuration::deleteByName( self::ACCEPTED_CARDS )
+			&& $this->cardsPayment->uninstall()
+			&& $this->mobilePayPayment->uninstall()
 		);
 	}
 
@@ -199,169 +146,19 @@ class LunarPayment extends PaymentModule
 		return Tools::substr( _PS_VERSION_, 0, 5 );
 	}
 
-	/**
-	 * @return bool
-	 */
-	private function validateLogoURL(string $url)
-	{
-        $allowedExtensions = ['png', 'jpg', 'jpeg'];
-		$isInvalidImage = false;
-
-        if (! $url) {
-            $this->context->controller->errors[ self::LOGO_URL ] = $this->l('Logo URL is required');
-			return false;
-		}
-
-        if (! preg_match('/^https:\/\//', $url)) {
-            $this->context->controller->errors[ self::LOGO_URL ] = $this->l('The image url must begin with https://.');
-			return false;
-		}
-
-        try {
-            $fileSpecs = getimagesize($url);
-        } catch (\Exception $e) {
-			$isInvalidImage = true;
-        }
-
-		if (!$fileSpecs || $isInvalidImage) {
-            $this->context->controller->errors[ self::LOGO_URL ] = $this->l('The image file doesn\'t seem to be valid');
-			return false;
-		}
-
-        $fileMimeType = explode('/', $fileSpecs['mime'] ?? '');
-        $fileExtension = end($fileMimeType);
-
-        // $fileDimensions = ($fileSpecs[0] ?? '') . 'x' . ($fileSpecs[1] ?? '');
-        // strcmp('250x250', $fileDimensions) !== 0      // disabled for the moment
-
-        if (! in_array($fileExtension, $allowedExtensions)) {
-            $this->context->controller->errors[ self::LOGO_URL ] = $this->l('The image file must have one of the following extensions: ' . implode(', ', $allowedExtensions));
-			return false;
-		}
-
-		return true;
-	}
 
 	/**
 	 * 
 	 */
 	public function getContent() {
 		if ( Tools::isSubmit( 'submitLunar' ) ) {
-
-			$valid = true;
-			
-			// $language_code = Configuration::get( self::LANGUAGE_CODE );
-			// $payment_method_title = Tools::getvalue( $language_code . '_' . self::PAYMENT_METHOD_TITLE ) ?? '';
-			// $payment_method_desc  = Tools::getvalue( $language_code . '_' . self::PAYMENT_METHOD_DESC ) ?? '';
-			// $shop_title = Tools::getvalue( $language_code . '_' . self::SHOP_TITLE ) ?? '';
-
-			$payment_method_title = Tools::getvalue( self::PAYMENT_METHOD_TITLE ) ?? '';
-			$payment_method_desc  = Tools::getvalue( self::PAYMENT_METHOD_DESC ) ?? '';
-			$shop_title = Tools::getvalue( self::SHOP_TITLE ) ?? '';
-			$logoURL = Tools::getvalue( self::LOGO_URL ) ?? '';
-
-			if ( empty( $payment_method_title ) ) {
-				// $this->context->controller->errors[ $language_code . '_' . self::PAYMENT_METHOD_TITLE ] = $this->l( 'Payment method title required!' );
-				$this->context->controller->errors[ self::PAYMENT_METHOD_TITLE ] = $this->l( 'Payment method title is required!' );
-				// $payment_method_title = $this->getTranslatedModuleConfig(self::PAYMENT_METHOD_TITLE);
-				$payment_method_title = Configuration::get(self::PAYMENT_METHOD_TITLE);
-				$valid = false;
-			}
-
-			if ( !$this->validateLogoURL($logoURL) ) {
-				$valid = false;
-			}
-
-			if ( count( Tools::getvalue( self::ACCEPTED_CARDS ) ) > 1 ) {
-				$acceptedCards = implode( ',', Tools::getvalue( self::ACCEPTED_CARDS ) );
-			} else {
-				$acceptedCards = Tools::getvalue( self::ACCEPTED_CARDS );
-			}
-
-			$transactionMode = Tools::getvalue( self::TRANSACTION_MODE );
-
-			// @TODO remove these 4 lines and activate validation
-			$test_secret_key = Tools::getvalue( self::TEST_SECRET_KEY ) ?? '';
-			$test_public_key = Tools::getvalue( self::TEST_PUBLIC_KEY ) ?? '';
-			$live_secret_key = Tools::getvalue( self::LIVE_SECRET_KEY ) ?? '';
-			$live_public_key = Tools::getvalue( self::LIVE_PUBLIC_KEY ) ?? '';
-
-
-			// if ('test' == $transactionMode) {
-			// 	/** Load db value or set it to empty **/
-			// 	$test_secret_key = Configuration::get( self::TEST_SECRET_KEY ) ?? '';
-			// 	$validationPublicKeyMessage = $this->validateAppKeyField(Tools::getvalue( self::TEST_SECRET_KEY ), 'test');
-			// 	if($validationPublicKeyMessage){
-			// 		$this->context->controller->errors[self::TEST_SECRET_KEY] = $validationPublicKeyMessage;
-			// 		$valid = false;
-			// 	} else{
-			// 		$test_secret_key = Tools::getvalue( self::TEST_SECRET_KEY ) ?? '';
-			// 	}
-
-			// 	/** Load db value or set it to empty **/
-			// 	$test_public_key = Configuration::get( self::TEST_PUBLIC_KEY ) ?? '';
-			// 	$validationAppKeyMessage = $this->validatePublicKeyField(Tools::getvalue( self::TEST_PUBLIC_KEY ), 'test');
-			// 	if($validationAppKeyMessage){
-			// 		$this->context->controller->errors[self::TEST_PUBLIC_KEY] = $validationAppKeyMessage;
-			// 		$valid = false;
-			// 	} else{
-			// 		$test_public_key = Tools::getvalue( self::TEST_PUBLIC_KEY ) ?? '';
-			// 	}
-
-			// } elseif ('live' == $transactionMode) {
-			// 	/** Load db value or set it to empty **/
-			// 	$live_secret_key = Configuration::get( self::LIVE_SECRET_KEY ) ?? '';
-			// 	$validationPublicKeyMessage = $this->validateAppKeyField(Tools::getvalue( self::LIVE_SECRET_KEY ), 'live');
-			// 	if($validationPublicKeyMessage){
-			// 		$this->context->controller->errors[self::LIVE_SECRET_KEY] = $validationPublicKeyMessage;
-			// 		$valid = false;
-			// 	} else{
-			// 		$live_secret_key = Tools::getvalue( self::LIVE_SECRET_KEY ) ?? '';
-			// 	}
-
-			// 	/** Load db value or set it to empty **/
-			// 	$live_public_key = Configuration::get( self::LIVE_PUBLIC_KEY ) ?? '';
-			// 	$validationAppKeyMessage = $this->validatePublicKeyField(Tools::getvalue( self::LIVE_PUBLIC_KEY ), 'live');
-			// 	if($validationAppKeyMessage){
-			// 		$this->context->controller->errors[self::LIVE_PUBLIC_KEY] = $validationAppKeyMessage;
-			// 		$valid = false;
-			// 	} else{
-			// 		$live_public_key = Tools::getvalue( self::LIVE_PUBLIC_KEY ) ?? '';
-			// 	}
-			// }
-
-			
-			// Configuration::updateValue( 'LUNAR_LANGUAGE_CODE', $language_code );
-
-			Configuration::updateValue( self::PAYMENT_METHOD_STATUS, Tools::getValue( self::PAYMENT_METHOD_STATUS ) );
-			Configuration::updateValue( self::TRANSACTION_MODE, $transactionMode );
-			
-			if ('test' == $transactionMode) {
-				Configuration::updateValue( self::TEST_PUBLIC_KEY, $test_public_key );
-				Configuration::updateValue( self::TEST_SECRET_KEY, $test_secret_key );
-			}
-			if ('live' == $transactionMode) {
-				Configuration::updateValue( self::LIVE_PUBLIC_KEY, $live_public_key );
-				Configuration::updateValue( self::LIVE_SECRET_KEY, $live_secret_key );
-			}
-			
-			Configuration::updateValue( self::LOGO_URL, Tools::getValue( self::LOGO_URL ) );
-
-			Configuration::updateValue( self::CHECKOUT_MODE, Tools::getValue( self::CHECKOUT_MODE ) );
-			Configuration::updateValue( self::ORDER_STATUS, Tools::getValue( self::ORDER_STATUS ) );
-			Configuration::updateValue( self::ACCEPTED_CARDS, $acceptedCards );
-			Configuration::updateValue( self::PAYMENT_METHOD_TITLE, $payment_method_title );
-			Configuration::updateValue( self::PAYMENT_METHOD_DESC, $payment_method_desc );
-			Configuration::updateValue( self::SHOP_TITLE, $shop_title );
-			// Configuration::updateValue( $language_code . '_' . self::PAYMENT_METHOD_TITLE, $payment_method_title );
-			// Configuration::updateValue( $language_code . '_' . self::PAYMENT_METHOD_DESC, $payment_method_desc );
-			// Configuration::updateValue( $language_code . '_' . self::SHOP_TITLE, $shop_title );
-
-			if ( $valid ) {
-				$this->context->controller->confirmations[] = $this->l( 'Settings saved successfully' );
+			if (
+				$this->cardsPayment->updateConfiguration()
+				&& $this->mobilePayPayment->updateConfiguration()
+			) {
+				$this->context->controller->confirmations[] = $this->l( 'Settings were saved successfully' );
 			}
 		}
-
 	
 		// $this->context->controller->addJS( $this->_path . 'views/js/backoffice.js' );
 		
@@ -370,390 +167,62 @@ class LunarPayment extends PaymentModule
 		return $this->renderForm() . $this->renderScript();
 	}
 
-	public function renderForm() {
-		$statuses_array  = [];
-		$logos_array     = [];
-		
-		// $languages_array = [];
-		//Fetch all active languages
-		// $language_code = Configuration::get( self::LANGUAGE_CODE );
-		// $languages = Language::getLanguages( true, $this->context->shop->id );
-		// foreach ( $languages as $language ) {
-		// 	$data = array(
-		// 		'id_option' => $language['iso_code'],
-		// 		'name'      => $language['name']
-		// 	);
-		// 	array_push( $languages_array, $data );
-		// }
+	public function renderForm()
+	{
+		$cards_fields_form = $this->cardsPayment->getFormFields();
+		$mobilepay_fields_form = $this->mobilePayPayment->getFormFields();
 
-		//Fetch Status list
-		$valid_statuses = array( '2', '3', '4', '5', '12' );
-		$statuses       = OrderState::getOrderStates( (int) $this->context->language->id );
-		foreach ( $statuses as $status ) {
-			//$statuses_array[$status['id_order_state']] = $status['name'];
-			if ( in_array( $status['id_order_state'], $valid_statuses ) ) {
-				$data = array(
-					'id_option' => $status['id_order_state'],
-					'name'      => $status['name']
-				);
-				array_push( $statuses_array, $data );
-			}
-		}
-
-		//$sql = 'SELECT * FROM `'._DB_PREFIX_. "lunar_logos`";
-		$sql = new DbQuery();
-		$sql->select( '*' );
-		$sql->from( "lunar_logos" );
-		$logos = Db::getInstance()->executes( $sql );
-
-		foreach ( $logos as $logo ) {
-			$data = array(
-				'id_option' => $logo['file_name'],
-				'name'      => $logo['name']
-			);
-			array_push( $logos_array, $data );
-		}
-
-		//Set configuration form fields
-		$fields_form = array(
-			'form' => array(
-				'legend' => array(
-					'title' => $this->l( 'Lunar Payments Settings' ),
-					'icon'  => 'icon-cogs'
-				),
-				'input'  => array(
-					// array(
-                    //     'type' => 'select',
-                    //     'label' => '<span data-toggle="tooltip" title="'.$this->l('Language').'">'.$this->l('Language').'<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-                    //     'name' => self::LANGUAGE_CODE,
-                    //     'class' => "lunar-config lunar-language",
-                    //     'options' => array(
-                    //         'query' => $languages_array,
-                    //         'id' => 'id_option',
-                    //         'name' => 'name'
-                    //     ),
-                    // ),
-					array(
-						'type'    => 'select',
-						'lang'    => true,
-						'name'    => self::PAYMENT_METHOD_STATUS,
-						'label'   => $this->l( 'Status' ),
-						'class'   => "lunar-config",
-						'options' => array(
-							'query' => array(
-								array(
-									'id_option' => 'enabled',
-									'name'      => 'Enabled'
-								),
-								array(
-									'id_option' => 'disabled',
-									'name'      => 'Disabled'
-								),
-							),
-							'id'    => 'id_option',
-							'name'  => 'name'
-						)
-					),
-					array(
-						'type'     => 'select',
-						'lang'     => true,
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'In test mode, you can create a successful transaction with the card number 4111 1111 1111 1111 with any CVC and a valid expiration date.' ) . '">' . $this->l( 'Transaction mode' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-						'name'     => self::TRANSACTION_MODE,
-						'class'    => "lunar-config",
-						'options'  => array(
-							'query' => array(
-								array(
-									'id_option' => 'live',
-									'name'      => 'Live'
-								),
-								array(
-									'id_option' => 'test',
-									'name'      => 'Test'
-								),
-							),
-							'id'    => 'id_option',
-							'name'  => 'name'
-						),
-						'required' => true
-					),
-					array(
-						'type'     => 'text',
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Get it from your Lunar dashboard' ) . '">' . $this->l( 'Test mode App Key' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-						'name'     => self::TEST_SECRET_KEY,
-						'class'    => "lunar-config",
-						'required' => true
-					),
-					array(
-						'type'     => 'text',
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Get it from your Lunar dashboard' ) . '">' . $this->l( 'Test mode Public Key' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-						'name'     => self::TEST_PUBLIC_KEY,
-						'class'    => "lunar-config",
-						'required' => true
-					),
-					array(
-						'type'     => 'text',
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Get it from your Lunar dashboard' ) . '">' . $this->l( 'App Key' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-						'name'     => self::LIVE_SECRET_KEY,
-						'class'    => "lunar-config",
-						'required' => true
-					),
-					array(
-						'type'     => 'text',
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Get it from your Lunar dashboard' ) . '">' . $this->l( 'Public Key' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-						'name'     => self::LIVE_PUBLIC_KEY,
-						'class'    => "lunar-config",
-						'required' => true
-					),
-					array(
-						'type'     => 'text',
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Must be a link begins with "https://" to a JPG,JPEG or PNG file' ) . '">' . $this->l( 'Logo URL' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-						'name'     => self::LOGO_URL,
-						'class'    => "lunar-config",
-						'required' => true
-					),
-					array(
-						'type'     => 'select',
-						'lang'     => true,
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'If you deliver your product instantly (e.g. a digital product), choose Instant mode. If not, use Delayed' ) . '">' . $this->l( 'Capture mode' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-						'name'     => self::CHECKOUT_MODE,
-						'class'    => "lunar-config",
-						'options'  => array(
-							'query' => array(
-								array(
-									'id_option' => 'delayed',
-									'name'      => $this->l( 'Delayed' )
-								),
-								array(
-									'id_option' => 'instant',
-									'name'      => $this->l( 'Instant' )
-								),
-							),
-							'id'    => 'id_option',
-							'name'  => 'name'
-						),
-						'required' => true,
-					),
-					array(
-						'type'    => 'select',
-						'lang'    => true,
-						'label'   => '<span data-toggle="tooltip" title="' . $this->l( 'The transaction will be captured once the order has the chosen status' ) . '">' . $this->l( 'Capture on order status (delayed mode)' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-						'name'    => self::ORDER_STATUS,
-						'class'   => "lunar-config",
-						'options' => array(
-							'query' => $statuses_array,
-							'id'    => 'id_option',
-							'name'  => 'name'
-						)
-					),
-					array(
-						'type'     => 'text',
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Payment method title' ) . '">' . $this->l( 'Payment method title' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-						// 'name'     => $language_code . '_' . self::PAYMENT_METHOD_TITLE,
-						'name'     => self::PAYMENT_METHOD_TITLE,
-						'class'    => "lunar-config",
-						'required' => true
-					),
-					array(
-						'type'  => 'textarea',
-						'label' => '<span data-toggle="tooltip" title="' . $this->l( 'Description' ) . '">' . $this->l( 'Description' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-						// 'name'  => $language_code . '_' . self::PAYMENT_METHOD_DESC,
-						'name'  => self::PAYMENT_METHOD_DESC,
-						'class' => "lunar-config",
-						//'required' => true
-					),
-					array(
-						'type'  => 'text',
-						'label' => '<span data-toggle="tooltip" title="' . $this->l( 'The text shown in the page where the customer is redirected' ) . '">' . $this->l( 'Shop title' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-						// 'name'  => $language_code . '_' . self::SHOP_TITLE,
-						'name'  => self::SHOP_TITLE,
-						'class' => "lunar-config",
-						//'required' => true
-					),
-					array(
-						'type'     => 'select',
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Choose logos to show in frontend checkout page.' ) . '">' . $this->l( 'Accepted cards' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-						'name'     => self::ACCEPTED_CARDS,
-						'class'    => "lunar-config accepted-cards",
-						'multiple' => true,
-						'options'  => array(
-							'query' => $logos_array,
-							'id'    => 'id_option',
-							'name'  => 'name'
-						),
-					),
-				),
-				'submit' => array(
-					'title' => $this->l( 'Save' ),
-				),
-
-			),
-		);
+		// we want only inputs to be merged
+		$form_fields['form']['legend'] = $cards_fields_form['form']['legend'];
+		$form_fields['form']['tabs'] = [
+			'lunar_cards' => $this->l('Cards Configuration'),
+			'lunar_mobilepay' => $this->l('Mobile Pay Configuration'),
+		];
+		$form_fields['form']['input'] = array_merge_recursive($cards_fields_form['form']['input'], $mobilepay_fields_form['form']['input']);
+		$form_fields['form']['submit'] = $cards_fields_form['form']['submit'];
 
 
-		$helper                           = new HelperForm();
-		$helper->show_toolbar             = false;
-		$helper->table                    = $this->table;
-		$lang                             = new Language( (int) Configuration::get( 'PS_LANG_DEFAULT' ) );
-		$helper->default_form_language    = $lang->id;
-		$helper->allow_employee_form_lang = Configuration::get( 'PS_BO_ALLOW_EMPLOYEE_FORM_LANG' ) ? Configuration::get( 'PS_BO_ALLOW_EMPLOYEE_FORM_LANG' ) : 0;
-		$helper->identifier    = $this->identifier;
-		$helper->submit_action = 'submitLunar';
-		$helper->currentIndex  = $this->context->link->getAdminLink( 'AdminModules', false ) . '&configure=lunarpayment&tab_module=' . $this->tab . '&module_name=lunarpayment';
-		$helper->token         = Tools::getAdminTokenLite( 'AdminModules' );
-		$helper->tpl_vars      = array(
+		$lang                              = new Language( (int) Configuration::get( 'PS_LANG_DEFAULT' ) );
+		$helper                            = new HelperForm();
+		$helper->default_form_language     = $lang->id;
+		$helper->allow_employee_form_lang  = Configuration::get( 'PS_BO_ALLOW_EMPLOYEE_FORM_LANG' ) ?? 0;
+		$helper->show_toolbar              = false;
+		$helper->table                     = $this->table;
+		$helper->identifier    			   = $this->identifier;
+		$helper->token         			   = Tools::getAdminTokenLite( 'AdminModules' );
+		$helper->submit_action 			   = 'submitLunar';
+		$helper->currentIndex  			   = $this->context->link->getAdminLink( 'AdminModules', false ) 
+												. '&configure=lunarpayment&tab_module=' 
+												. $this->tab . '&module_name=lunarpayment';
+		$helper->tpl_vars      			   = [
 			'fields_value' => $this->getConfigFieldsValues(),
-			'languages'    => $this->context->controller->getLanguages(),
+			// 'languages'    => $this->context->controller->getLanguages(),
 			'id_language'  => $this->context->language->id
-		);
+		];
 
 
 		$errors = $this->context->controller->errors;
-		foreach ( $fields_form['form']['input'] as $key => $field ) {
+		foreach ( $form_fields['form']['input'] as $key => $field ) {
 			if ( array_key_exists( $field['name'], $errors ) ) {
-				$fields_form['form']['input'][ $key ]['class'] .= ' has-error';
+				$form_fields['form']['input'][ $key ]['class'] .= ' has-error';
 			}
 		}
 
-		return $helper->generateForm( array( $fields_form ) );
+		return $helper->generateForm([$form_fields]);
 	}
 
 	/**
 	 * 
 	 */
 	public function getConfigFieldsValues() {
-		// $language_code = Configuration::get( self::LANGUAGE_CODE );
+		$lunarCardsConfigValues = $this->cardsPayment->getConfiguration();
+		$lunarMobilePayConfigValues = $this->mobilePayPayment->getConfiguration();
 
-		$acceptedCards = explode( ',', Configuration::get( self::ACCEPTED_CARDS ) );
-
-		// $payment_method_title = $this->getTranslatedModuleConfig(self::PAYMENT_METHOD_TITLE);
-		// $payment_method_desc  = $this->getTranslatedModuleConfig(self::PAYMENT_METHOD_DESC);
-		// $shop_title          = $this->getTranslatedModuleConfig(self::SHOP_TITLE);
-		$payment_method_title = Configuration::get(self::PAYMENT_METHOD_TITLE);
-		$payment_method_desc  = Configuration::get(self::PAYMENT_METHOD_DESC);
-		$shop_title           = Configuration::get(self::SHOP_TITLE);
-
-		if ( empty( $payment_method_title ) ) {
-			// $this->context->controller->errors[ $language_code . '_' . self::PAYMENT_METHOD_TITLE ] = $this->l( 'Payment method title required!' );
-			$this->context->controller->errors[ self::PAYMENT_METHOD_TITLE ] = $this->l( 'Payment method title required!' );
-		}
-
-		if ( !$this->validateLogoURL( Configuration::get(self::LOGO_URL)) ) {
-			$this->context->controller->errors[ self::LOGO_URL ] = $this->l( 'Logo URL is required!' );
-		}
-
-		// @TODO activate validation when is ready
-
-		// if ( Configuration::get( self::TRANSACTION_MODE ) == 'test' ) {
-		// 	$validationAppKeyMessage = $this->validateAppKeyField(Configuration::get( self::TEST_SECRET_KEY ),'test');
-		// 	if ($validationAppKeyMessage && empty($this->context->controller->errors[self::TEST_SECRET_KEY])) {
-		// 		$this->context->controller->errors[self::TEST_SECRET_KEY] = $validationAppKeyMessage;
-		// 	}
-		// 	$validationPublicKeyMessage = $this->validatePublicKeyField(Configuration::get( self::TEST_PUBLIC_KEY ),'test');
-		// 	if ($validationPublicKeyMessage && empty($this->context->controller->errors[self::TEST_PUBLIC_KEY])) {
-		// 		$this->context->controller->errors[self::TEST_PUBLIC_KEY] = $validationPublicKeyMessage;
-		// 	}
-		// } elseif ( Configuration::get( self::TRANSACTION_MODE) == 'live' ) {
-		// 	$validationAppKeyMessage = $this->validateAppKeyField(Configuration::get( self::LIVE_SECRET_KEY ),'live');
-		// 	if ($validationAppKeyMessage && empty($this->context->controller->errors[self::LIVE_SECRET_KEY])) {
-		// 		$this->context->controller->errors[self::LIVE_SECRET_KEY] = $validationAppKeyMessage;
-		// 	}
-		// 	$validationPublicKeyMessage = $this->validatePublicKeyField(Configuration::get( self::LIVE_PUBLIC_KEY ),'live');
-		// 	if ($validationPublicKeyMessage && empty($this->context->controller->errors[self::LIVE_PUBLIC_KEY])) {
-		// 		$this->context->controller->errors[self::LIVE_PUBLIC_KEY] = $validationPublicKeyMessage;
-		// 	}
-		// }
-
-		return [
-			// self::LANGUAGE_CODE     	=> Configuration::get( self::LANGUAGE_CODE ),
-			self::PAYMENT_METHOD_STATUS => Configuration::get( self::PAYMENT_METHOD_STATUS ),
-			self::TRANSACTION_MODE  	=> Configuration::get( self::TRANSACTION_MODE ),
-			self::TEST_PUBLIC_KEY   	=> Configuration::get( self::TEST_PUBLIC_KEY ),
-			self::TEST_SECRET_KEY   	=> Configuration::get( self::TEST_SECRET_KEY ),
-			self::LIVE_PUBLIC_KEY   	=> Configuration::get( self::LIVE_PUBLIC_KEY ),
-			self::LIVE_SECRET_KEY   	=> Configuration::get( self::LIVE_SECRET_KEY ),
-			self::LOGO_URL    			=> Configuration::get( self::LOGO_URL ),
-			self::CHECKOUT_MODE     	=> Configuration::get( self::CHECKOUT_MODE ),
-			self::ORDER_STATUS      	=> Configuration::get( self::ORDER_STATUS ),
-			self::PAYMENT_METHOD_TITLE  => $payment_method_title,
-			self::PAYMENT_METHOD_DESC   => $payment_method_desc,
-			self::SHOP_TITLE            => $shop_title,
-			self::ACCEPTED_CARDS . '[]' => $acceptedCards,
-			// $language_code . '_' . self::PAYMENT_METHOD_TITLE => $payment_method_title,
-			// $language_code . '_' . self::PAYMENT_METHOD_DESC  => $payment_method_desc,
-			// $language_code . '_' . self::SHOP_TITLE           => $shop_title,
-		];
+		return array_merge(
+			$lunarCardsConfigValues,
+			$lunarMobilePayConfigValues
+		);
 	}
-
-
-	// /**
-	//  * Validate the App key.
-	//  *
-	//  * @param string $value - the value of the input.
-	//  * @param string $mode - the transaction mode 'test' | 'live'.
-	//  *
-	//  * @return string - the error message
-	//  */
-	// public function validateAppKeyField( $value, $mode ) {
-	// 	/** Check if the key value is empty **/
-	// 	if ( ! $value ) {
-	// 		return $this->l( 'The App Key is required!' );
-	// 	}
-	// 	/** Load the client from API**/
-	// 	$apiClient = new ApiClient( $value );
-	// 	try {
-	// 		/** Load the identity from API**/
-	// 		$identity = $apiClient->apps()->fetch();
-	// 	} catch ( ApiException $exception ) {
-	// 		PrestaShopLogger::addLog( $exception );
-	// 		return $this->l( "The App Key doesn't seem to be valid!");
-	// 	}
-
-	// 	try {
-	// 		/** Load the merchants public keys list corresponding for current identity **/
-	// 		$merchants = $apiClient->merchants()->find( $identity['id'] );
-	// 		if ( $merchants ) {
-	// 			foreach ( $merchants as $merchant ) {
-	// 				/** Check if the key mode is the same as the transaction mode **/
-	// 				if(($mode == 'test' && $merchant['test']) || ($mode != 'test' && !$merchant['test'])){
-	// 					$this->validationPublicKeys[$mode][] = $merchant['key'];
-	// 				}
-	// 			}
-	// 		}
-	// 	} catch ( ApiException $exception ) {
-	// 		PrestaShopLogger::addLog( $exception );
-	// 	}
-
-	// 	/** Check if public keys array for the current mode is populated **/
-	// 	if ( empty( $this->validationPublicKeys[$mode] ) ) {
-	// 		/** Generate the error based on the current mode **/
-	// 		// $error = $this->l( 'The '.$mode .' App Key is not valid or set to '.array_values(array_diff(array_keys($this->validationPublicKeys), array($mode)))[0].' mode!' );
-	// 		$error = $this->l( 'The App Key is not valid or set to different mode!' );
-	// 		PrestaShopLogger::addLog( $error );
-	// 		return $error;
-	// 	}
-	// }
-
-	// /**
-	//  * Validate the Public key.
-	//  *
-	//  * @param string $value - the value of the input.
-	//  * @param string $mode - the transaction mode 'test' | 'live'.
-	//  *
-	//  * @return mixed
-	//  * @throws Exception
-	//  */
-	// public function validatePublicKeyField($value, $mode) {
-	// 	/** Check if the key value is not empty **/
-	// 	if ( ! $value ) {
-	// 		return $this->l( 'The Public Key is required!' );
-	// 	}
-	// 	/** Check if the local stored public keys array is empty OR the key is not in public keys list **/
-	// 	if ( empty( $this->validationPublicKeys[$mode] ) || ! in_array( $value, $this->validationPublicKeys[$mode] ) ) {
-	// 		$error = $this->l( 'The Public Key doesn\'t seem to be valid!' );
-	// 		PrestaShopLogger::addLog( $error );
-	// 		return $error;
-	// 	}
-	// }
 
 	/**
      * @param $params
@@ -763,29 +232,13 @@ class LunarPayment extends PaymentModule
      * @throws Exception
      * @throws SmartyException
 	 */
-	public function hookPaymentOptions( $params ) {
-		//ensure plugin key is set
-		// if ( Configuration::get( self::TRANSACTION_MODE ) == 'test' ) {
-		// 	if ( ! Configuration::get( self::TEST_PUBLIC_KEY ) || ! Configuration::get( self::TEST_SECRET_KEY ) ) {
-		// 		return false;
-		// 	} else {
-		// 		$PLUGIN_PUBLIC_KEY = Configuration::get( self::TEST_PUBLIC_KEY );
-		// 	}
-		// }
-
-		// if ( Configuration::get( self::TRANSACTION_MODE ) == 'live' ) {
-		// 	if ( ! Configuration::get( self::LIVE_PUBLIC_KEY ) || ! Configuration::get( self::LIVE_SECRET_KEY ) ) {
-		// 		return false;
-		// 	} else {
-		// 		$PLUGIN_PUBLIC_KEY = Configuration::get( self::LIVE_PUBLIC_KEY );
-		// 	}
-		// }
-
+	public function hookPaymentOptions( $params )
+	{
 		if ( 
-			! Configuration::get( self::TEST_PUBLIC_KEY ) 
-			&& ! Configuration::get( self::TEST_SECRET_KEY ) 
-			&& ! Configuration::get( self::LIVE_PUBLIC_KEY ) 
-			&& ! Configuration::get( self::LIVE_SECRET_KEY ) 
+			! Configuration::get( $this->cardsPayment->TEST_PUBLIC_KEY ) 
+			&& ! Configuration::get( $this->cardsPayment->TEST_SECRET_KEY ) 
+			&& ! Configuration::get( $this->cardsPayment->LIVE_PUBLIC_KEY ) 
+			&& ! Configuration::get( $this->cardsPayment->LIVE_SECRET_KEY ) 
 		) {
 			return false;
 		}
@@ -842,33 +295,20 @@ class LunarPayment extends PaymentModule
 		$this->context->smarty->assign([
 			'module_path'			=> $this->_path,
 
-			'lunar_cards_title'		=> Configuration::get(self::PAYMENT_METHOD_TITLE),
-			'lunar_cards_desc'		=> Configuration::get(self::PAYMENT_METHOD_DESC),
-			'accepted_cards'		=> explode( ',', Configuration::get( self::ACCEPTED_CARDS ) ),
-			'shop_title'			=> Configuration::get(self::SHOP_TITLE),
+			'lunar_cards_title'		=> Configuration::get($this->cardsPayment->METHOD_TITLE),
+			'lunar_cards_desc'		=> Configuration::get($this->cardsPayment->METHOD_DESCRIPTION),
+			'accepted_cards'		=> explode( ',', Configuration::get( $this->cardsPayment->ACCEPTED_CARDS ) ),
+			'shop_title'			=> Configuration::get($this->cardsPayment->SHOP_TITLE),
 			
-			// 'lunar_mobilepay_title'		=> Configuration::get(self::PAYMENT_METHOD_TITLE),
+			// 'lunar_mobilepay_title'		=> Configuration::get($this->cardsPayment->METHOD_TITLE),
 			'lunar_mobilepay_title'		=> 'Mobile Pay',
-			'lunar_mobilepay_desc'		=> Configuration::get(self::PAYMENT_METHOD_DESC),
+			'lunar_mobilepay_desc'		=> Configuration::get($this->cardsPayment->METHOD_DESCRIPTION),
 		]);
 		
-		$newOption = new PaymentOption();
-		$newOption->setModuleName( $this->name )
-					->setCallToActionText(Configuration::get(self::PAYMENT_METHOD_TITLE))
-					->setAction( $this->context->link->getModuleLink( $this->name, 'cardspayment', [], true ) )
-					->setAdditionalInformation( $this->display( __FILE__, 'views/templates/hook/cardspayment.tpl' ) );
-		$payment_options[] = $newOption;
 
+		$payment_options[] = $this->cardsPayment->getPaymentOption();
+		$payment_options[] = $this->mobilePayPayment->getPaymentOption();
 
-		$newOption = new PaymentOption();
-		$newOption->setModuleName( $this->name )
-					->setCallToActionText($this->l('Mobile Pay'))
-					// ->setLogo(Media::getMediaPath(_PS_MODULE_DIR_ . $this->name . '/views/img/mobilepay-logo.png')) // @TODO test this on staging
-					->setLogo(('/modules/lunarpayment/views/img/mobilepay-logo.png'))
-					->setAction( $this->context->link->getModuleLink( $this->name, 'mobilepaypayment', [], true ) )
-					->setAdditionalInformation( $this->display( __FILE__, 'views/templates/hook/mobilepaypayment.tpl' ) );
-		$payment_options[] = $newOption;
-		
 		return $payment_options;
 	}
 

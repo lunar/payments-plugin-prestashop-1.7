@@ -5,27 +5,8 @@ $(document).ready(function () {
     // $(`select[name="LUNAR_ACCEPTED_CARDS[]"]`).parent('div').append(html);
     // $('[data-toggle="tooltip"]').tooltip();
 
-    $(`.lunar-config`).each(function (index, item) {
-        if ($(item).hasClass('has-error')) {
-            $(item).parents('.form-group').addClass('has-error');
-        }
-    });
-
-    $(`.lunar-language`).bind('change', moduleLanguageChange);
     $('#logo_form').on('submit', ajaxSaveLogo);
-
-    /** Hide or show TEST inputs on module configuration page */
-    if ("debug" !== document.location.search.match(/debug/gi)?.toString() && "live" === $(`#LUNAR_TRANSACTION_MODE`).val()) {
-        $(`#LUNAR_TRANSACTION_MODE`).closest(".form-group").hide();
-        $(`#LUNAR_TEST_SECRET_KEY`).closest(".form-group").hide();
-        $(`#LUNAR_TEST_PUBLIC_KEY`).closest(".form-group").hide();
-    }
 });
-
-function moduleLanguageChange(e) {
-    var lang_code = $(e.currentTarget).val();
-    window.location = lunarpayment.admin_orders_uri + "&change_language&lang_code=" + lang_code;
-}
 
 function ajaxSaveLogo(e) {
     e.preventDefault();

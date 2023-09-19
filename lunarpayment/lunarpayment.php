@@ -286,8 +286,11 @@ class LunarPayment extends PaymentModule
 		// ];
 		
 		if (
-			'disabled' == Configuration::get( $this->cardsMethod->METHOD_STATUS)
-			&& 'disabled' == Configuration::get( $this->mobilePayMethod->METHOD_STATUS)
+			('disabled' == Configuration::get( $this->cardsMethod->METHOD_STATUS)
+				&& 'disabled' == Configuration::get( $this->mobilePayMethod->METHOD_STATUS))
+			||
+			(!$this->cardsMethod->isConfigured() 
+				&& !$this->mobilePayMethod->isConfigured())
 		) {
 			return;
 		}
@@ -297,7 +300,10 @@ class LunarPayment extends PaymentModule
 			'module_path' => $this->_path,
 		];
 
-		if ('enabled' == Configuration::get( $this->cardsMethod->METHOD_STATUS)) {
+		if (
+			'enabled' == Configuration::get( $this->cardsMethod->METHOD_STATUS)
+			&& $this->cardsMethod->isConfigured()
+		) {
 			$frontendVars = array_merge($frontendVars, [
 				'lunar_cards_shop_title' => Configuration::get($this->cardsMethod->SHOP_TITLE),
 				'lunar_cards_title' => Configuration::get($this->cardsMethod->METHOD_TITLE),
@@ -308,7 +314,10 @@ class LunarPayment extends PaymentModule
 		}
 
 
-		if ('enabled' == Configuration::get( $this->mobilePayMethod->METHOD_STATUS)) {
+		if (
+			'enabled' == Configuration::get( $this->mobilePayMethod->METHOD_STATUS)
+			&& $this->mobilePayMethod->isConfigured()
+		) {
 			$frontendVars = array_merge($frontendVars, [
 				'lunar_mobilepay_shop_title' => Configuration::get($this->mobilePayMethod->SHOP_TITLE),
 				'lunar_mobilepay_title'	=> Configuration::get($this->mobilePayMethod->METHOD_TITLE),

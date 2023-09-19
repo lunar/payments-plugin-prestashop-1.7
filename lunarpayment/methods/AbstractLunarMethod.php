@@ -275,6 +275,21 @@ abstract class AbstractLunarMethod
         return $valid;
     }
 
+	/**
+	 * 
+	 */
+	public function isConfigured()
+	{
+		if ('test' == Configuration::get($this->TRANSACTION_MODE)) {
+			return Configuration::get($this->TEST_PUBLIC_KEY) && Configuration::get($this->TEST_SECRET_KEY);
+		} else {
+			return Configuration::get($this->LIVE_PUBLIC_KEY) && Configuration::get($this->LIVE_SECRET_KEY);
+		}
+	}
+
+	/**
+	 * 
+	 */
     protected function validateKeys()
     {
         $isSaveAllowed = true;

@@ -100,8 +100,6 @@ class LunarCardsMethod extends AbstractLunarMethod
     public function getFormFields()
     {
         $logos_array     = [];
-
-		//$sql = 'SELECT * FROM `'._DB_PREFIX_. "lunar_logos`";
 		$sql = new DbQuery();
 		$sql->select( '*' );
 		$sql->from( "lunar_logos" );

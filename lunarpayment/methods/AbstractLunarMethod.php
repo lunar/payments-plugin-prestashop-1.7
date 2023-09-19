@@ -92,25 +92,10 @@ abstract class AbstractLunarMethod
 			&& Configuration::updateValue( $this->METHOD_DESCRIPTION, $this->DESCRIPTION )
 			&& Configuration::updateValue( $this->SHOP_TITLE, Configuration::get( 'PS_SHOP_NAME' ) ?? 'Payment' )
 		);
-
-		// $language_code = $this->context->language->iso_code;
-		// Configuration::updateValue( $this->LANGUAGE_CODE, $language_code );
-		// Configuration::updateValue( $language_code . '_' . $this->METHOD_TITLE, 'Cards' );
-		// Configuration::updateValue( $language_code . '_' . $this->METHOD_DESCRIPTION, 'Secure payment with card via © Lunar' );
-		// Configuration::updateValue( $language_code . '_' . $this->SHOP_TITLE, $shop_title );
     }
 
     protected function uninstall()
     {
-        //Fetch all languages and delete plugin configurations which has language iso_code as prefix
-        // $languages = Language::getLanguages( true, $this->context->shop->id );
-        // foreach ( $languages as $language ) {
-        // 	$language_code = $language['iso_code'];
-        // 	Configuration::deleteByName( $language_code . '_' . $this->METHOD_TITLE );
-        // 	Configuration::deleteByName( $language_code . '_' . $this->METHOD_DESCRIPTION );
-        // 	Configuration::deleteByName( $language_code . '_' . $this->SHOP_TITLE );
-        // }
-
         return (
             Configuration::deleteByName( $this->METHOD_STATUS )
             && Configuration::deleteByName( $this->TRANSACTION_MODE )
@@ -132,8 +117,6 @@ abstract class AbstractLunarMethod
 	 */
 	protected function getConfiguration()
     {
-        // $language_code = $this->context->language->iso_code;
-
         return [
             $this->METHOD_STATUS 		 => Configuration::get( $this->METHOD_STATUS ),
 			$this->TRANSACTION_MODE  	 => Configuration::get( $this->TRANSACTION_MODE ),
@@ -147,11 +130,6 @@ abstract class AbstractLunarMethod
 			$this->METHOD_TITLE  		 => Configuration::get($this->METHOD_TITLE),
 			$this->METHOD_DESCRIPTION    => Configuration::get($this->METHOD_DESCRIPTION),
 			$this->SHOP_TITLE            => Configuration::get($this->SHOP_TITLE),
-            
-			// $this->LANGUAGE_CODE     	=> Configuration::get( $this->LANGUAGE_CODE ),
-			// $language_code . '_' . $this->METHOD_TITLE => Configuration::get($this->METHOD_TITLE),
-			// $language_code . '_' . $this->METHOD_DESCRIPTION  => Configuration::get($this->METHOD_DESCRIPTION),
-			// $language_code . '_' . $this->SHOP_TITLE           => Configuration::get($this->SHOP_TITLE),
 		];
 	}
 
@@ -161,14 +139,9 @@ abstract class AbstractLunarMethod
 	 */
 	protected function updateConfiguration() {
         $isSaveAllowed = true;
-        
-        // $language_code = Configuration::get( $this->LANGUAGE_CODE );
-        // $payment_method_title = Tools::getvalue( $language_code . '_' . $this->METHOD_TITLE ) ?? '';
-        // $payment_method_desc  = Tools::getvalue( $language_code . '_' . $this->METHOD_DESCRIPTION ) ?? '';
-        // $shop_title = Tools::getvalue( $language_code . '_' . $this->SHOP_TITLE ) ?? '';
-
         $methodStatus = Tools::getValue( $this->METHOD_STATUS );
-        if ('disabled' == $methodStatus) {
+        
+		if ('disabled' == $methodStatus) {
             Configuration::updateValue( $this->METHOD_STATUS, $methodStatus );
             return $isSaveAllowed;
         }
@@ -180,9 +153,7 @@ abstract class AbstractLunarMethod
         $logoURL = Tools::getvalue( $this->LOGO_URL ) ?? '';
 
         if ( empty( $payment_method_title ) ) {
-            // $this->context->controller->errors[ $language_code . '_' . $this->METHOD_TITLE ] = $this->l( 'Payment method title required!' );
             $this->context->controller->errors[ $this->METHOD_TITLE ] = $this->errorMessage( 'Payment method title is required!' );
-            // $payment_method_title = $this->getTranslatedModuleConfig($this->METHOD_TITLE);
             $payment_method_title = Configuration::get($this->METHOD_TITLE);
             $isSaveAllowed = false;
         }
@@ -197,11 +168,7 @@ abstract class AbstractLunarMethod
         $live_secret_key = Tools::getvalue( $this->LIVE_SECRET_KEY ) ?? '';
         $live_public_key = Tools::getvalue( $this->LIVE_PUBLIC_KEY ) ?? '';
 
-        // $isSaveAllowed = $this->validateKeys();
-
-        // Configuration::updateValue( $this->LANGUAGE_CODE, $language_code );
-
-        
+        // $isSaveAllowed = $this->validateKeys();        
 
         $transactionMode = Tools::getvalue( $this->TRANSACTION_MODE );
         Configuration::updateValue( $this->TRANSACTION_MODE, $transactionMode );
@@ -216,16 +183,11 @@ abstract class AbstractLunarMethod
         }
         
         Configuration::updateValue( $this->LOGO_URL, Tools::getValue( $this->LOGO_URL ) );
-
         Configuration::updateValue( $this->CHECKOUT_MODE, Tools::getValue( $this->CHECKOUT_MODE ) );
         Configuration::updateValue( $this->ORDER_STATUS, Tools::getValue( $this->ORDER_STATUS ) );
         Configuration::updateValue( $this->METHOD_TITLE, $payment_method_title );
         Configuration::updateValue( $this->METHOD_DESCRIPTION, $payment_method_desc );
         Configuration::updateValue( $this->SHOP_TITLE, $shop_title );
-        
-        // Configuration::updateValue( $language_code . '_' . $this->METHOD_TITLE, $payment_method_title );
-        // Configuration::updateValue( $language_code . '_' . $this->METHOD_DESCRIPTION, $payment_method_desc );
-        // Configuration::updateValue( $language_code . '_' . $this->SHOP_TITLE, $shop_title );
 
         return $isSaveAllowed;
 	}
@@ -420,24 +382,11 @@ abstract class AbstractLunarMethod
 
     protected function getFormFields()
     {
-		// $languages_array = [];
-		//Fetch all active languages
-		// $language_code = Configuration::get( $this->LANGUAGE_CODE );
-		// $languages = Language::getLanguages( true, $this->context->shop->id );
-		// foreach ( $languages as $language ) {
-		// 	$data = array(
-		// 		'id_option' => $language['iso_code'],
-		// 		'name'      => $language['name']
-		// 	);
-		// 	array_push( $languages_array, $data );
-		// }
-
 		//Fetch Status list
         $statuses_array  = [];
 		$valid_statuses = array( '2', '3', '4', '5', '12' );
 		$statuses       = OrderState::getOrderStates( (int) $this->context->language->id );
 		foreach ( $statuses as $status ) {
-			//$statuses_array[$status['id_order_state']] = $status['name'];
 			if ( in_array( $status['id_order_state'], $valid_statuses ) ) {
 				$data = array(
 					'id_option' => $status['id_order_state'],
@@ -454,18 +403,6 @@ abstract class AbstractLunarMethod
 					'icon'  => 'icon-cogs'
 				),
 				'input'  => array(
-					// array(
-                    //     'type' => 'select',
-                    //     'tab'  => $this->tabName,
-                    //     'label' => '<span data-toggle="tooltip" title="'.$this->l('Language').'">'.$this->l('Language').'<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-                    //     'name' => $this->LANGUAGE_CODE,
-                    //     'class' => "lunar-config lunar-language",
-                    //     'options' => array(
-                    //         'query' => $languages_array,
-                    //         'id' => 'id_option',
-                    //         'name' => 'name'
-                    //     ),
-                    // ),
 					array(
 						'type'    => 'select',
                         'tab'     => $this->tabName,
@@ -591,7 +528,6 @@ abstract class AbstractLunarMethod
 						'type'     => 'text',
                         'tab'      => $this->tabName,
 						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Payment method title' ) . '">' . $this->l( 'Payment method title' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-						// 'name'     => $language_code . '_' . $this->METHOD_TITLE,
 						'name'     => $this->METHOD_TITLE,
 						'class'    => "lunar-config",
 						'required' => true,
@@ -600,19 +536,15 @@ abstract class AbstractLunarMethod
 						'type'  => 'textarea',
                         'tab'      => $this->tabName,
 						'label' => '<span data-toggle="tooltip" title="' . $this->l( 'Description' ) . '">' . $this->l( 'Description' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-						// 'name'  => $language_code . '_' . $this->METHOD_DESCRIPTION,
 						'name'  => $this->METHOD_DESCRIPTION,
 						'class' => "lunar-config",
-						//'required' => true,
 					),
 					array(
 						'type'  => 'text',
                         'tab'      => $this->tabName,
 						'label' => '<span data-toggle="tooltip" title="' . $this->l( 'The text shown in the page where the customer is redirected' ) . '">' . $this->l( 'Shop title' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-						// 'name'  => $language_code . '_' . $this->SHOP_TITLE,
 						'name'  => $this->SHOP_TITLE,
 						'class' => "lunar-config",
-						//'required' => true,
 					),
 				),
 				'submit' => array(

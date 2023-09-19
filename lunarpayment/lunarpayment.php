@@ -263,7 +263,6 @@ class LunarPayment extends PaymentModule
 			&& $this->cardsMethod->isConfigured()
 		) {
 			$frontendVars = array_merge($frontendVars, [
-				'lunar_cards_shop_title' => Configuration::get($this->cardsMethod->SHOP_TITLE),
 				'lunar_cards_title' => Configuration::get($this->cardsMethod->METHOD_TITLE),
 				'lunar_cards_desc' => Configuration::get($this->cardsMethod->METHOD_DESCRIPTION),
 				'accepted_cards' => explode( ',', Configuration::get( $this->cardsMethod->ACCEPTED_CARDS ) ),
@@ -277,7 +276,6 @@ class LunarPayment extends PaymentModule
 			&& $this->mobilePayMethod->isConfigured()
 		) {
 			$frontendVars = array_merge($frontendVars, [
-				'lunar_mobilepay_shop_title' => Configuration::get($this->mobilePayMethod->SHOP_TITLE),
 				'lunar_mobilepay_title'	=> Configuration::get($this->mobilePayMethod->METHOD_TITLE),
 				'lunar_mobilepay_desc' => Configuration::get($this->mobilePayMethod->METHOD_DESCRIPTION),
 			]);
@@ -599,14 +597,6 @@ class LunarPayment extends PaymentModule
 				die( json_encode( $response ) );
 			}
 		}
-
-		// if ( Tools::getIsset( 'change_language' ) ) {
-		// 	$language_code = ( ! empty( Tools::getvalue( 'lang_code' ) ) ) ? Tools::getvalue( 'lang_code' ) : Configuration::get( self::LANGUAGE_CODE );
-		// 	Configuration::updateValue( self::LANGUAGE_CODE, $language_code );
-		// 	$token = Tools::getAdminToken( 'AdminModules' . (int)  Tab::getIdFromClassName( 'AdminModules' ) . (int) $this->context->employee->id );
-		// 	$link  = $this->context->link->getAdminLink( 'AdminModules' ) . '&token=' . $token . '&configure=lunarpayment&tab_module=' . $this->tab . '&module_name=lunarpayment';
-		// 	Tools::redirectAdmin( $link );
-		// }
 
 		if ( Tools::getValue( 'configure' ) == $this->name ) {
 			$this->context->controller->addCSS( $this->_path . 'views/css/backoffice.css' );
@@ -936,18 +926,5 @@ class LunarPayment extends PaymentModule
 	// 	) );
 
 	// 	return $this->display( __FILE__, 'views/templates/admin/modal.tpl' );
-	// }
-			
-	/**
-	 * @TODO make call to this method when activate translations
-	 */
-	// private function getTranslatedModuleConfig(string $key)
-	// {
-	// 	$language_code = Configuration::get( self::LANGUAGE_CODE );
-	// 	return ( ! empty( Configuration::get( $language_code . '_' . $key ) ) ) 
-	// 				? Configuration::get( $language_code . '_' . $key ) 
-	// 				: ( ! empty( Configuration::get( 'en_' . $key ) ) 
-	// 						? Configuration::get( 'en_' . $key ) 
-	// 						: '' );
 	// }
 }

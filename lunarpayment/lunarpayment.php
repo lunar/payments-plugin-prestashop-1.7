@@ -14,7 +14,6 @@ if ( ! defined( '_PS_VERSION_' ) ) {
 
 require_once __DIR__.'/vendor/autoload.php';
 
-
 use Lunar\Exception\ApiException;
 use Lunar\Lunar as ApiClient;
 use Lunar\Payment\methods\LunarCardsMethod;
@@ -25,8 +24,8 @@ use Lunar\Payment\methods\LunarMobilePayMethod;
  */
 class LunarPayment extends PaymentModule 
 {
-	private LunarCardsMethod $cardsPayment;
-	private LunarMobilePayMethod $mobilePayPayment;
+	private LunarCardsMethod $cardsMethod;
+	private LunarMobilePayMethod $mobilePayMethod;
 
 	/**
 	 * 
@@ -48,8 +47,8 @@ class LunarPayment extends PaymentModule
 
 		parent::__construct();
 
-		$this->cardsPayment = new LunarCardsMethod($this);
-		$this->mobilePayPayment = new LunarMobilePayMethod($this);
+		$this->cardsMethod = new LunarCardsMethod($this);
+		$this->mobilePayMethod = new LunarMobilePayMethod($this);
 	}
 
 	/**
@@ -67,8 +66,8 @@ class LunarPayment extends PaymentModule
 			&& $this->registerHook( 'actionOrderStatusPostUpdate' )
 			&& $this->registerHook( 'actionOrderSlipAdd' )
 			&& $this->createDbTables()
-			&& $this->cardsPayment->install()
-			&& $this->mobilePayPayment->install()
+			&& $this->cardsMethod->install()
+			&& $this->mobilePayMethod->install()
 		);
 	}
 
@@ -137,8 +136,8 @@ class LunarPayment extends PaymentModule
 			parent::uninstall()
 			&& Db::getInstance()->execute( 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . "lunar_transactions`" )
 			&& Db::getInstance()->execute( 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . "lunar_logos`" )
-			&& $this->cardsPayment->uninstall()
-			&& $this->mobilePayPayment->uninstall()
+			&& $this->cardsMethod->uninstall()
+			&& $this->mobilePayMethod->uninstall()
 		);
 	}
 
@@ -153,8 +152,8 @@ class LunarPayment extends PaymentModule
 	public function getContent() {
 		if ( Tools::isSubmit( 'submitLunar' ) ) {
 			if (
-				$this->cardsPayment->updateConfiguration()
-				&& $this->mobilePayPayment->updateConfiguration()
+				$this->cardsMethod->updateConfiguration()
+				&& $this->mobilePayMethod->updateConfiguration()
 			) {
 				$this->context->controller->confirmations[] = $this->l( 'Settings were saved successfully' );
 			}
@@ -169,8 +168,8 @@ class LunarPayment extends PaymentModule
 
 	public function renderForm()
 	{
-		$cards_fields_form = $this->cardsPayment->getFormFields();
-		$mobilepay_fields_form = $this->mobilePayPayment->getFormFields();
+		$cards_fields_form = $this->cardsMethod->getFormFields();
+		$mobilepay_fields_form = $this->mobilePayMethod->getFormFields();
 
 		// we want only inputs to be merged
 		$form_fields['form']['legend'] = $cards_fields_form['form']['legend'];
@@ -215,8 +214,8 @@ class LunarPayment extends PaymentModule
 	 * 
 	 */
 	public function getConfigFieldsValues() {
-		$lunarCardsConfigValues = $this->cardsPayment->getConfiguration();
-		$lunarMobilePayConfigValues = $this->mobilePayPayment->getConfiguration();
+		$lunarCardsConfigValues = $this->cardsMethod->getConfiguration();
+		$lunarMobilePayConfigValues = $this->mobilePayMethod->getConfiguration();
 
 		return array_merge(
 			$lunarCardsConfigValues,
@@ -234,14 +233,9 @@ class LunarPayment extends PaymentModule
 	 */
 	public function hookPaymentOptions( $params )
 	{
-		if ( 
-			! Configuration::get( $this->cardsPayment->TEST_PUBLIC_KEY ) 
-			&& ! Configuration::get( $this->cardsPayment->TEST_SECRET_KEY ) 
-			&& ! Configuration::get( $this->cardsPayment->LIVE_PUBLIC_KEY ) 
-			&& ! Configuration::get( $this->cardsPayment->LIVE_SECRET_KEY ) 
-		) {
-			return false;
-		}
+		if (!$this->active) {
+            return;
+        }
 
 		// $products       = $params['cart']->getProducts();
 		// $products_array = [];
@@ -291,22 +285,39 @@ class LunarPayment extends PaymentModule
 		// 	'lunarPluginVersion'		=> $this->version,
 		// ];
 		
-		
-		$this->context->smarty->assign([
-			'module_path'			=> $this->_path,
-			'shop_title'			=> Configuration::get($this->cardsPayment->SHOP_TITLE),
+		if (
+			'disabled' == Configuration::get( $this->cardsMethod->METHOD_STATUS)
+			&& 'disabled' == Configuration::get( $this->mobilePayMethod->METHOD_STATUS)
+		) {
+			return;
+		}
 
-			'lunar_cards_title'		=> Configuration::get($this->cardsPayment->METHOD_TITLE),
-			'lunar_cards_desc'		=> Configuration::get($this->cardsPayment->METHOD_DESCRIPTION),
-			'accepted_cards'		=> explode( ',', Configuration::get( $this->cardsPayment->ACCEPTED_CARDS ) ),
-			
-			'lunar_mobilepay_title'		=> Configuration::get($this->mobilePayPayment->METHOD_TITLE),
-			'lunar_mobilepay_desc'		=> Configuration::get($this->mobilePayPayment->METHOD_DESCRIPTION),
-		]);
-		
+		$payment_options = [];
+		$frontendVars = [
+			'module_path' => $this->_path,
+		];
 
-		$payment_options[] = $this->cardsPayment->getPaymentOption();
-		$payment_options[] = $this->mobilePayPayment->getPaymentOption();
+		if ('enabled' == Configuration::get( $this->cardsMethod->METHOD_STATUS)) {
+			$frontendVars = array_merge($frontendVars, [
+				'lunar_cards_shop_title' => Configuration::get($this->cardsMethod->SHOP_TITLE),
+				'lunar_cards_title' => Configuration::get($this->cardsMethod->METHOD_TITLE),
+				'lunar_cards_desc' => Configuration::get($this->cardsMethod->METHOD_DESCRIPTION),
+				'accepted_cards' => explode( ',', Configuration::get( $this->cardsMethod->ACCEPTED_CARDS ) ),
+			]);
+			$payment_options[] = $this->cardsMethod->getPaymentOption();
+		}
+
+
+		if ('enabled' == Configuration::get( $this->mobilePayMethod->METHOD_STATUS)) {
+			$frontendVars = array_merge($frontendVars, [
+				'lunar_mobilepay_shop_title' => Configuration::get($this->mobilePayMethod->SHOP_TITLE),
+				'lunar_mobilepay_title'	=> Configuration::get($this->mobilePayMethod->METHOD_TITLE),
+				'lunar_mobilepay_desc' => Configuration::get($this->mobilePayMethod->METHOD_DESCRIPTION),
+			]);
+			$payment_options[] = $this->mobilePayMethod->getPaymentOption();
+		}
+
+		$this->context->smarty->assign($frontendVars);
 
 		return $payment_options;
 	}

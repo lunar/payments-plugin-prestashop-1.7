@@ -11,6 +11,7 @@
 <style type="text/css">
     label > img[src*="mobilepay-logo.png"] {
         max-height: 20px;
+        margin-left: 5px;
     }
     
     #mobilepay-logo {

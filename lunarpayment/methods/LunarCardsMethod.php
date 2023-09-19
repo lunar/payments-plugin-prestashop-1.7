@@ -16,7 +16,7 @@ class LunarCardsMethod extends AbstractLunarMethod
     
     public string $METHOD_NAME = self::METHOD_NAME;
     public string $DESCRIPTION = 'Secure payment with card via © Lunar';
-    public string $FILE_NAME = 'cardpayment';
+    public string $FILE_NAME = 'cardsmethod';
 	public string $ACCEPTED_CARDS = '';
 
     protected $tabName = 'lunar_cards';

@@ -14,7 +14,7 @@ class LunarMobilePayMethod extends AbstractLunarMethod
 
     public string $METHOD_NAME = self::METHOD_NAME;
     public string $DESCRIPTION = 'Secure payment with Mobile Pay via © Lunar';
-    public string $FILE_NAME = 'mobilepaypayment';
+    public string $FILE_NAME = 'mobilepaymethod';
     public string $CONFIGURATION_ID = '';
 
     protected $tabName = 'lunar_mobilepay';

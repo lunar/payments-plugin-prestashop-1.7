@@ -72,7 +72,7 @@ abstract class AbstractLunarMethod
 		return $paymentOption->setModuleName( $this->module->name )
 					->setCallToActionText(Configuration::get($this->METHOD_TITLE))
 					->setAction( $this->context->link->getModuleLink( $this->module->name, $this->FILE_NAME, [], true ) )
-					->setAdditionalInformation( $this->module->display( __FILE__, 'views/templates/hook/' . $this->FILE_NAME . '.tpl' ) );
+					->setAdditionalInformation( $this->context->smarty->fetch('module:lunarpayment/views/templates/hook/' . $this->FILE_NAME . '.tpl' ) );
 		
     }
 
@@ -279,10 +279,10 @@ abstract class AbstractLunarMethod
     {
         $isSaveAllowed = true;
         
-        $test_secret_key = Tools::getvalue( $this->TEST_SECRET_KEY ) ?? '';
-        $test_public_key = Tools::getvalue( $this->TEST_PUBLIC_KEY ) ?? '';
-        $live_secret_key = Tools::getvalue( $this->LIVE_SECRET_KEY ) ?? '';
-        $live_public_key = Tools::getvalue( $this->LIVE_PUBLIC_KEY ) ?? '';
+        // $test_secret_key = Tools::getvalue( $this->TEST_SECRET_KEY ) ?? '';
+        // $test_public_key = Tools::getvalue( $this->TEST_PUBLIC_KEY ) ?? '';
+        // $live_secret_key = Tools::getvalue( $this->LIVE_SECRET_KEY ) ?? '';
+        // $live_public_key = Tools::getvalue( $this->LIVE_PUBLIC_KEY ) ?? '';
 
         // if ('test' == $transactionMode) {
         // 	/** Load db value or set it to empty **/

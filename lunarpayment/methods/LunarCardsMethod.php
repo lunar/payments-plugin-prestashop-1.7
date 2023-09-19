@@ -62,7 +62,7 @@ class LunarCardsMethod extends AbstractLunarMethod
             && parent::uninstall()
         );
     }
-    
+
     /**
 	 * 
 	 */
@@ -133,5 +133,57 @@ class LunarCardsMethod extends AbstractLunarMethod
         $parentFields['form']['input'][] = $acceptedCardsField;
 
         return $parentFields;
+    }
+
+    /**
+     * 
+     */
+    public function createSeedLogosTable()
+    {
+        return (
+            Db::getInstance()->execute( 'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . "lunar_logos` (
+                `id` INT(11) NOT NULL AUTO_INCREMENT,
+                `name` VARCHAR(255) NOT NULL,
+                `slug` VARCHAR(255) NOT NULL,
+                `file_name` VARCHAR(255) NOT NULL,
+                `default_logo` INT(11) NOT NULL DEFAULT 1 COMMENT '1=Default',
+                `created_at` DATETIME NOT NULL,
+                PRIMARY KEY (`id`)
+                ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;" )
+
+			&& Db::getInstance()->insert(
+				"lunar_logos",
+				array(
+					array(
+						'id'         => 1,
+						'name'       => pSQL( 'VISA' ),
+						'slug'       => pSQL( 'visa' ),
+						'file_name'  => pSQL( 'visa.svg' ),
+						'created_at' => date( 'Y-m-d H:i:s' ),
+					),
+					array(
+						'id'         => 2,
+						'name'       => pSQL( 'VISA Electron' ),
+						'slug'       => pSQL( 'visa-electron' ),
+						'file_name'  => pSQL( 'visa-electron.svg' ),
+						'created_at' => date( 'Y-m-d H:i:s' ),
+					),
+					array(
+						'id'         => 3,
+						'name'       => pSQL( 'Mastercard' ),
+						'slug'       => pSQL( 'mastercard' ),
+						'file_name'  => pSQL( 'mastercard.svg' ),
+						'created_at' => date( 'Y-m-d H:i:s' ),
+					),
+					array(
+						'id'         => 4,
+						'name'       => pSQL( 'Mastercard Maestro' ),
+						'slug'       => pSQL( 'mastercard-maestro' ),
+						'file_name'  => pSQL( 'mastercard-maestro.svg' ),
+						'created_at' => date( 'Y-m-d H:i:s' ),
+					),
+				)
+			)
+        );
     }
 }

@@ -78,18 +78,20 @@ abstract class AbstractLunarMethod
 
     protected function install()
     {
-		Configuration::updateValue( $this->METHOD_STATUS, 'enabled' );
-		Configuration::updateValue( $this->TRANSACTION_MODE, 'live' ); // defaults to live mode
-		Configuration::updateValue( $this->TEST_SECRET_KEY, '' );
-		Configuration::updateValue( $this->TEST_PUBLIC_KEY, '' );
-		Configuration::updateValue( $this->LIVE_SECRET_KEY, '' );
-		Configuration::updateValue( $this->LIVE_PUBLIC_KEY, '' );
-		Configuration::updateValue( $this->LOGO_URL, '' );
-		Configuration::updateValue( $this->CHECKOUT_MODE, 'delayed' );
-		Configuration::updateValue( $this->ORDER_STATUS, Configuration::get( $this->ORDER_STATUS ) );
-		Configuration::updateValue( $this->METHOD_TITLE, $this->METHOD_NAME );
-		Configuration::updateValue( $this->METHOD_DESCRIPTION, $this->DESCRIPTION );
-		Configuration::updateValue( $this->SHOP_TITLE, Configuration::get( 'PS_SHOP_NAME' ) ?? 'Payment' );
+		return (
+			Configuration::updateValue( $this->METHOD_STATUS, 'enabled' )
+			&& Configuration::updateValue( $this->TRANSACTION_MODE, 'live' ) // defaults to live mode
+			&& Configuration::updateValue( $this->TEST_SECRET_KEY, '' )
+			&& Configuration::updateValue( $this->TEST_PUBLIC_KEY, '' )
+			&& Configuration::updateValue( $this->LIVE_SECRET_KEY, '' )
+			&& Configuration::updateValue( $this->LIVE_PUBLIC_KEY, '' )
+			&& Configuration::updateValue( $this->LOGO_URL, '' )
+			&& Configuration::updateValue( $this->CHECKOUT_MODE, 'delayed' )
+			&& Configuration::updateValue( $this->ORDER_STATUS, Configuration::get( $this->ORDER_STATUS ) )
+			&& Configuration::updateValue( $this->METHOD_TITLE, $this->METHOD_NAME )
+			&& Configuration::updateValue( $this->METHOD_DESCRIPTION, $this->DESCRIPTION )
+			&& Configuration::updateValue( $this->SHOP_TITLE, Configuration::get( 'PS_SHOP_NAME' ) ?? 'Payment' )
+		);
 
 		// $language_code = $this->context->language->iso_code;
 		// Configuration::updateValue( $this->LANGUAGE_CODE, $language_code );

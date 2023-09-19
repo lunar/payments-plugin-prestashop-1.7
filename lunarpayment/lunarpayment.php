@@ -253,36 +253,30 @@ class LunarPayment extends PaymentModule
 			return;
 		}
 
-		$payment_options = [];
-		$frontendVars = [
+		$this->context->smarty->assign([
 			'module_path' => $this->_path,
-		];
+			'lunar_cards_title' => Configuration::get($this->cardsMethod->METHOD_TITLE),
+			'lunar_cards_desc' => Configuration::get($this->cardsMethod->METHOD_DESCRIPTION),
+			'accepted_cards' => explode( ',', Configuration::get( $this->cardsMethod->ACCEPTED_CARDS ) ),
+			'lunar_mobilepay_title'	=> Configuration::get($this->mobilePayMethod->METHOD_TITLE),
+			'lunar_mobilepay_desc' => Configuration::get($this->mobilePayMethod->METHOD_DESCRIPTION),
+		]);
+
+		$payment_options = [];
 
 		if (
 			'enabled' == Configuration::get( $this->cardsMethod->METHOD_STATUS)
 			&& $this->cardsMethod->isConfigured()
 		) {
-			$frontendVars = array_merge($frontendVars, [
-				'lunar_cards_title' => Configuration::get($this->cardsMethod->METHOD_TITLE),
-				'lunar_cards_desc' => Configuration::get($this->cardsMethod->METHOD_DESCRIPTION),
-				'accepted_cards' => explode( ',', Configuration::get( $this->cardsMethod->ACCEPTED_CARDS ) ),
-			]);
 			$payment_options[] = $this->cardsMethod->getPaymentOption();
 		}
-
 
 		if (
 			'enabled' == Configuration::get( $this->mobilePayMethod->METHOD_STATUS)
 			&& $this->mobilePayMethod->isConfigured()
 		) {
-			$frontendVars = array_merge($frontendVars, [
-				'lunar_mobilepay_title'	=> Configuration::get($this->mobilePayMethod->METHOD_TITLE),
-				'lunar_mobilepay_desc' => Configuration::get($this->mobilePayMethod->METHOD_DESCRIPTION),
-			]);
 			$payment_options[] = $this->mobilePayMethod->getPaymentOption();
 		}
-
-		$this->context->smarty->assign($frontendVars);
 
 		return $payment_options;
 	}

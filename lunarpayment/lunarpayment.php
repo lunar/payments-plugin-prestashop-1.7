@@ -294,15 +294,14 @@ class LunarPayment extends PaymentModule
 		
 		$this->context->smarty->assign([
 			'module_path'			=> $this->_path,
+			'shop_title'			=> Configuration::get($this->cardsPayment->SHOP_TITLE),
 
 			'lunar_cards_title'		=> Configuration::get($this->cardsPayment->METHOD_TITLE),
 			'lunar_cards_desc'		=> Configuration::get($this->cardsPayment->METHOD_DESCRIPTION),
 			'accepted_cards'		=> explode( ',', Configuration::get( $this->cardsPayment->ACCEPTED_CARDS ) ),
-			'shop_title'			=> Configuration::get($this->cardsPayment->SHOP_TITLE),
 			
-			// 'lunar_mobilepay_title'		=> Configuration::get($this->cardsPayment->METHOD_TITLE),
-			'lunar_mobilepay_title'		=> 'Mobile Pay',
-			'lunar_mobilepay_desc'		=> Configuration::get($this->cardsPayment->METHOD_DESCRIPTION),
+			'lunar_mobilepay_title'		=> Configuration::get($this->mobilePayPayment->METHOD_TITLE),
+			'lunar_mobilepay_desc'		=> Configuration::get($this->mobilePayPayment->METHOD_DESCRIPTION),
 		]);
 		
 
@@ -941,18 +940,6 @@ class LunarPayment extends PaymentModule
 	/**
 	 * 
 	 */
-	// public function getModalForAddMoreLogo() {
-	// 	$this->context->smarty->assign( array(
-	// 		'request_uri' => $this->context->link->getAdminLink( 'AdminOrders', false ),
-	// 		'tok'         => Tools::getAdminToken( 'AdminOrders' )
-	// 	) );
-
-	// 	return $this->display( __FILE__, 'views/templates/admin/modal.tpl' );
-	// }
-		
-	/**
-	 * 
-	 */
 	public function renderScript() {
 		$this->context->smarty->assign([
 			'request_uri' => $this->context->link->getAdminLink( 'AdminOrders', false ),
@@ -961,7 +948,18 @@ class LunarPayment extends PaymentModule
 		return $this->display( __FILE__, 'views/templates/admin/script.tpl' );
 	}
 
-	
+	/**
+	 * 
+	 */
+	// public function getModalForAddMoreLogo() {
+	// 	$this->context->smarty->assign( array(
+	// 		'request_uri' => $this->context->link->getAdminLink( 'AdminOrders', false ),
+	// 		'tok'         => Tools::getAdminToken( 'AdminOrders' )
+	// 	) );
+
+	// 	return $this->display( __FILE__, 'views/templates/admin/modal.tpl' );
+	// }
+			
 	/**
 	 * @TODO make call to this method when activate translations
 	 */

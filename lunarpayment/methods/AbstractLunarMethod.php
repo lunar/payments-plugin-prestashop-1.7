@@ -133,7 +133,7 @@ abstract class AbstractLunarMethod
         // $language_code = $this->context->language->iso_code;
 
         return [
-            $this->METHOD_STATUS => Configuration::get( $this->METHOD_STATUS ),
+            $this->METHOD_STATUS 		 => Configuration::get( $this->METHOD_STATUS ),
 			$this->TRANSACTION_MODE  	 => Configuration::get( $this->TRANSACTION_MODE ),
 			$this->TEST_PUBLIC_KEY   	 => Configuration::get( $this->TEST_PUBLIC_KEY ),
 			$this->TEST_SECRET_KEY   	 => Configuration::get( $this->TEST_SECRET_KEY ),
@@ -142,8 +142,8 @@ abstract class AbstractLunarMethod
 			$this->LOGO_URL    			 => Configuration::get( $this->LOGO_URL ),
 			$this->CHECKOUT_MODE     	 => Configuration::get( $this->CHECKOUT_MODE ),
 			$this->ORDER_STATUS      	 => Configuration::get( $this->ORDER_STATUS ),
-			$this->METHOD_TITLE  => Configuration::get($this->METHOD_TITLE),
-			$this->METHOD_DESCRIPTION   => Configuration::get($this->METHOD_DESCRIPTION),
+			$this->METHOD_TITLE  		 => Configuration::get($this->METHOD_TITLE),
+			$this->METHOD_DESCRIPTION    => Configuration::get($this->METHOD_DESCRIPTION),
 			$this->SHOP_TITLE            => Configuration::get($this->SHOP_TITLE),
             
 			// $this->LANGUAGE_CODE     	=> Configuration::get( $this->LANGUAGE_CODE ),
@@ -233,43 +233,47 @@ abstract class AbstractLunarMethod
 	 */
 	private function validateLogoURL(string $url)
 	{
-        $allowedExtensions = ['png', 'jpg', 'jpeg'];
-		$isInvalidImage = false;
+		$errorMessage = '';
 
         if (! $url) {
-            $this->context->controller->errors[ $this->LOGO_URL ] = $this->errorMessage('Logo URL is required');
+            $errorMessage = $this->errorMessage('Logo URL is required');
+		
+		} elseif (! preg_match('/^https:\/\//', $url)) {
+            $errorMessage = $this->errorMessage('The image url must begin with https://.');
+		
+		} elseif (!$this->fileExists($url)) {
+            $errorMessage = $this->errorMessage('The image file doesn\'t seem to be valid');
+		}
+		if ($errorMessage) {
+			$this->context->controller->errors[ $this->LOGO_URL ] = $errorMessage;
 			return false;
 		}
-
-        if (! preg_match('/^https:\/\//', $url)) {
-            $this->context->controller->errors[ $this->LOGO_URL ] = $this->errorMessage('The image url must begin with https://.');
-			return false;
-		}
-
-        try {
-            $fileSpecs = getimagesize($url);
-        } catch (\Exception $e) {
-			$isInvalidImage = true;
-        }
-
-		if (!$fileSpecs || $isInvalidImage) {
-            $this->context->controller->errors[ $this->LOGO_URL ] = $this->errorMessage('The image file doesn\'t seem to be valid');
-			return false;
-		}
-
-        $fileMimeType = explode('/', $fileSpecs['mime'] ?? '');
-        $fileExtension = end($fileMimeType);
-
-        // $fileDimensions = ($fileSpecs[0] ?? '') . 'x' . ($fileSpecs[1] ?? '');
-        // strcmp('250x250', $fileDimensions) !== 0      // disabled for the moment
-
-        if (! in_array($fileExtension, $allowedExtensions)) {
-            $this->context->controller->errors[ $this->LOGO_URL ] = $this->errorMessage('The image file must have one of the following extensions: ' . implode(', ', $allowedExtensions));
-			return false;
-		}
-
+		
 		return true;
 	}
+
+    /**
+     * @return bool
+     */
+    private function fileExists($url)
+    {
+        $valid = true;
+
+        $c = curl_init();
+        curl_setopt($c, CURLOPT_URL, $url);
+        curl_setopt($c, CURLOPT_HEADER, 1);
+        curl_setopt($c, CURLOPT_NOBODY, 1);
+        curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($c, CURLOPT_FRESH_CONNECT, 1);
+        
+        if(!curl_exec($c)){
+            $valid = false;
+        }
+
+        curl_close($c);
+
+        return $valid;
+    }
 
     protected function validateKeys()
     {

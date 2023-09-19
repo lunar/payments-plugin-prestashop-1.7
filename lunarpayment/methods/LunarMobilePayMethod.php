@@ -2,7 +2,6 @@
 
 namespace Lunar\Payment\methods;
 
-
 use \Tools;
 use \Configuration;
 

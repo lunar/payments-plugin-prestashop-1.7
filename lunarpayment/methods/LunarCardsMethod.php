@@ -2,7 +2,6 @@
 
 namespace Lunar\Payment\methods;
 
-
 use \Db;
 use \Tools;
 use \DbQuery;
@@ -69,7 +68,12 @@ class LunarCardsMethod extends AbstractLunarMethod
 	 */
 	public function getConfiguration()
     {
-        return array_merge(parent::getConfiguration(), [$this->ACCEPTED_CARDS . '[]' =>  Configuration::get($this->ACCEPTED_CARDS)]);
+        return array_merge(
+            parent::getConfiguration(), 
+            [
+                $this->ACCEPTED_CARDS . '[]' =>  Configuration::get($this->ACCEPTED_CARDS)
+            ]
+        );
 	}
     
     /**
@@ -77,10 +81,12 @@ class LunarCardsMethod extends AbstractLunarMethod
 	 */
 	public function updateConfiguration()
     {
-        if ( count( Tools::getvalue( $this->ACCEPTED_CARDS ) ) > 1 ) {
-            $acceptedCards = implode( ',', Tools::getvalue( $this->ACCEPTED_CARDS ) );
+        $acceptedCards = Tools::getvalue( $this->ACCEPTED_CARDS );
+
+        if ( $acceptedCards && count( $acceptedCards ) > 1 ) {
+            $acceptedCards = implode( ',', $acceptedCards );
         } else {
-            $acceptedCards = Tools::getvalue( $this->ACCEPTED_CARDS );
+            $acceptedCards = $acceptedCards;
         }
 
         Configuration::updateValue( $this->ACCEPTED_CARDS, $acceptedCards );

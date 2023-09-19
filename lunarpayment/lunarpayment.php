@@ -243,16 +243,6 @@ class LunarPayment extends PaymentModule
 		// 	'lunarPluginVersion'		=> $this->version,
 		// ];
 		
-		if (
-			('disabled' == Configuration::get( $this->cardsMethod->METHOD_STATUS)
-				&& 'disabled' == Configuration::get( $this->mobilePayMethod->METHOD_STATUS))
-			||
-			(!$this->cardsMethod->isConfigured() 
-				&& !$this->mobilePayMethod->isConfigured())
-		) {
-			return;
-		}
-
 		$this->context->smarty->assign([
 			'module_path' => $this->_path,
 			'lunar_cards_title' => Configuration::get($this->cardsMethod->METHOD_TITLE),

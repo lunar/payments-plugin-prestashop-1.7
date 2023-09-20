@@ -44,7 +44,7 @@ abstract class AbstractLunarMethod
 	protected function __construct($module) {
         $this->module = $module;
 		$this->context = Context::getContext();
-		$this->controllerName = strtolower($this->METHOD_NAME);
+		$this->controllerName = $this->METHOD_NAME;
 		
         $configKeyBegin = 'LUNAR_' . $this->METHOD_NAME;
 

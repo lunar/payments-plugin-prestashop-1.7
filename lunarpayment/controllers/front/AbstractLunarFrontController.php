@@ -2,6 +2,7 @@
 
 namespace Lunar\Payment\controllers\front;
 
+use Address;
 use \Order;
 use \Tools;
 use \Module;
@@ -14,6 +15,7 @@ use \PrestaShopLogger;
 
 
 use Lunar\Lunar as ApiClient;
+use Lunar\Exception\ApiException;
 use Lunar\Payment\methods\LunarCardMethod;
 use Lunar\Payment\methods\LunarMobilePayMethod;
 
@@ -53,37 +55,13 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
         parent::__construct();
         $this->setTemplate('module:lunarpayment/views/templates/front/empty.tpl');
                 
-        $this->validateCustomer();
-
         $this->setPaymentMethod($methodName);
 
         if (!$this->method) {
-            $this->errors['error_msg'] = $this->errorMessage('Payment method not loaded');
-            $this->redirectWithNotifications('index.php?controller=order');
+            $this->redirectBackWithNotification('Payment method not loaded');
         }
-
-        $this->baseURL = __PS_BASE_URI__;
-        $this->isInstantMode = ('instant' == $this->getConfigValue('CHECKOUT_MODE'));
-
-
-        $this->testMode = 'test' == $this->getConfigValue('TRANSACTION_MODE');
-        if ($this->testMode) {
-            $this->publicKey =  $this->getConfigValue('TEST_PUBLIC_KEY');
-            $privateKey =  $this->getConfigValue('TEST_SECRET_KEY');
-        } else {
-            $this->publicKey = $this->getConfigValue('LIVE_PUBLIC_KEY');
-            $privateKey = $this->getConfigValue('LIVE_SECRET_KEY');
-        }
-
-        /** API Client instance */
-        $this->lunarApiClient = new ApiClient($privateKey);  
-
-
-        // $allValues = Tools::getAllValues();
-
-        // Tools::redirect();  
     }
-
+    
     /**
      * @return void
      */
@@ -101,31 +79,81 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
         }
     }
 
+    /**
+     * 
+     */
+    public function init()
+    {
+        parent::init();
+
+        $this->baseURL = __PS_BASE_URI__;
+        $this->isInstantMode = ('instant' == $this->getConfigValue('CHECKOUT_MODE'));
+
+
+        $this->testMode = 'test' == $this->getConfigValue('TRANSACTION_MODE');
+        if ($this->testMode) {
+            $this->publicKey =  $this->getConfigValue('TEST_PUBLIC_KEY');
+            $privateKey =  $this->getConfigValue('TEST_SECRET_KEY');
+        } else {
+            $this->publicKey = $this->getConfigValue('LIVE_PUBLIC_KEY');
+            $privateKey = $this->getConfigValue('LIVE_SECRET_KEY');
+        }
+
+        /** API Client instance */
+        $this->lunarApiClient = new ApiClient($privateKey);
+    }
 
     /**
      * @see FrontController::postProcess()
      */
     public function postProcess()
     {
-        if (false === $this->checkIfContextIsValid() || false === $this->checkIfPaymentOptionIsAvailable()) {
-            Tools::redirect($this->context->link->getPageLink('order', true, (int) $this->context->language->id));
-        }        
+        $this->validate();
         
         $cart = $this->context->cart;
-        $customer = new Customer($cart->id_customer);
         
         $orderId = (int) Order::getIdByCartId((int) $cart->id );
-
+        
         $this->setArgs();
 
-        Tools::redirect($this->context->link->getPageLink('order-confirmation', true, (int) $this->context->language->id,
-            [
-                'id_cart' => (int) $cart->id,
-                'id_module' => (int) $this->module->id,
-                'id_order' =>  $orderId,
-                'key' => $customer->secure_key,
-            ]
-        ));
+        try {
+            $this->paymentIntentId = $this->lunarApiClient->payments()->create($this->args);
+        } catch(ApiException $e) {
+            $this->redirectBackWithNotification($e->getMessage());
+        }
+
+        // if (! $this->getPaymentIntentFromOrder()) {
+        //     try {
+        //         $this->paymentIntentId = $this->lunarApiClient->payments()->create($this->args);
+        //     } catch(ApiException $e) {
+        //         $this->redirectBackWithNotification($e->getMessage());
+        //     }
+        // }
+
+        // if (! $this->paymentIntentId) {
+        //     $this->redirectBackWithNotification('An error occurred creating payment for order. Please try again or contact system administrator.'); // <a href="/">Go to homepage</a>'
+        // }
+
+        // $this->savePaymentIntentOnOrder();
+
+        // @TODO use $this->redirect_after ?
+
+        $redirectUrl = self::REMOTE_URL . $this->paymentIntentId;
+        if(isset($this->args['test'])) {
+            $redirectUrl = self::TEST_REMOTE_URL . $this->paymentIntentId;
+        }
+
+        Tools::redirect($redirectUrl);
+        
+        // Tools::redirect($this->context->link->getPageLink('order-confirmation', true,
+        //     (int) $this->context->language->id,
+        //     [
+        //         'id_cart' => (int) $cart->id,
+        //         'id_module' => (int) $this->module->id,
+        //         'id_order' =>  $orderId,
+        //         'key' => $customer->secure_key,
+        //     ]
+        // ));
     }
 
 
@@ -137,6 +165,36 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
         if ($this->testMode) {
             $this->args['test'] = $this->getTestObject();
         }
+
+        $cart      = $this->context->cart;
+        $customer  = new Customer( (int) $cart->id_customer );
+        $name      = $customer->firstname . ' ' . $customer->lastname;
+        $email     = $customer->email;
+        $address   = new Address( (int) ( $cart->id_address_delivery ) );
+        $telephone = $address->phone ?? $address->phone_mobile ?? '';
+        $address   = $address->address1 . ', ' . $address->address2 . ', ' . $address->city 
+                    . ', ' . $address->country . ' - ' . $address->postcode;
+
+        $this->args['amount'] = [
+            'currency' => $this->context->currency->iso_code,
+            'decimal' => (string) $cart->getOrderTotal(),
+        ];
+
+        $this->args['custom'] = [
+			'products' => $this->getFormattedProducts(),
+            'customer' => [
+                'name' => $name,
+                'email' => $email,
+                'telephone' => $telephone,
+                'address' => $address,
+                'ip' => Tools::getRemoteAddr(),
+            ],
+			'platform' => [
+				'name' => 'Prestashop',
+				'version' => _PS_VERSION_,
+			],
+			'lunarPluginVersion' => $this->module->version,
+        ];
 
         $this->args['integration'] = [
             'key' => $this->publicKey,
@@ -151,71 +209,87 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
             ];
         }
 
-        $this->args['custom'] = [
-            'orderId' => $this->order->id,
-        ];
-
         $this->args['redirectUrl'] = $this->getCurrentURL();
-        $this->args['preferredPaymentMethod'] = $this->getConfigValue('METHOD_NAME');
+        $this->args['preferredPaymentMethod'] = $this->method->METHOD_NAME;
     }
 
     /**
-     *
+     * @return void
+     */
+    private function validate()
+    {
+        $this->validateCustomer();
+        $this->checkIfContextIsValid();
+        $this->checkIfPaymentOptionIsAvailable();
+    }
+
+    /**
+     * @return void
      */
     private function validateCustomer()
     {
         if (!Validate::isLoadedObject($this->context->customer)) {
-            $this->errors = ['message' => 'No customer found! Please enter valid data!'];
-            $this->redirectBack();
+            $this->redirectBackWithNotification('Customer validation failed');
         }
     }
 
     /**
-     * @return bool
+     * @return void
      */
     private function checkIfContextIsValid()
     {
-        return true === Validate::isLoadedObject($this->context->cart)
-            && true === Validate::isUnsignedInt($this->context->cart->id_customer)
-            && true === Validate::isUnsignedInt($this->context->cart->id_address_delivery)
-            && true === Validate::isUnsignedInt($this->context->cart->id_address_invoice)
-            && false === $this->context->cart->isVirtualCart();
+        if (
+            !(
+                true === Validate::isLoadedObject($this->context->cart)
+                && true === Validate::isUnsignedInt($this->context->cart->id_customer)
+                && true === Validate::isUnsignedInt($this->context->cart->id_address_delivery)
+                && true === Validate::isUnsignedInt($this->context->cart->id_address_invoice)
+                && false === $this->context->cart->isVirtualCart()
+            )
+        ) {
+            $this->redirectBackWithNotification('Context validations failed');
+        }
     }
 
     /**
      * Check that this payment option is still available 
      * (maybe someone saved the url or changed other things)
      *
-     * @return bool
+     * @return void
      */
     private function checkIfPaymentOptionIsAvailable()
     {
-        if ('enabled' != $this->getConfigValue('METHOD_STATUS')) {
-            return false;
-        }
-
+        $valid = true;
         $modules = Module::getPaymentModules();
 
-        if (empty($modules)) {
-            return false;
+        if (
+            'enabled' != $this->getConfigValue('METHOD_STATUS')
+            || 
+            empty($modules)
+        ) {
+            $valid = false;
         }
 
         foreach ($modules as $module) {
-            if (isset($module['name']) && $this->module->name === $module['name']) {
-                return true;
+            if (!(isset($module['name']) || $this->module->name === $module['name'])) {
+                $valid = false;
             }
         }
 
-        return false;
+        if (!$valid) {
+            $this->redirectBackWithNotification('Payment method validation failed');
+        }
     }
 
     /**
      * 
      */
-    private function redirectBack()
+    private function redirectBackWithNotification(string $errorMessage)
     {
-        // $this->redirectWithNotifications($this->getCurrentURL());
-        Tools::redirect($this->getCurrentURL());
+        // $this->errors['error_code'] = 'Lunar error';
+        // $this->errors['msg_long'] = $errorMessage;
+        $this->errors['error_msg'] = $this->errorMessage($errorMessage);
+        $this->redirectWithNotifications('index.php?controller=order');
     }
 
     /**
@@ -284,12 +358,12 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
                 "status"  => "valid",
                 "limit"   => [
                     "decimal"  => "25000.99",
-                    "currency" => $this->args['amount']['currency'],
+                    "currency" => $this->context->currency->iso_code,
                     
                 ],
                 "balance" => [
                     "decimal"  => "25000.99",
-                    "currency" => $this->args['amount']['currency'],
+                    "currency" => $this->context->currency->iso_code,
                     
                 ]
             ],
@@ -303,7 +377,7 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     }
     
     /**
-     * @return string|null
+     * @return mixed
      */
     private function getConfigValue($configKey)
     {
@@ -317,7 +391,35 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     /**
      * 
      */
+    private function getFormattedProducts()
+    {
+		$products_array = [];
+
+        $products = $this->context->cart->getProducts();
+		
+        foreach ( $products as $product ) {
+			$products_array[] = [
+				$this->t( 'ID' ) => $product['id_product'],
+				$this->t( 'Name' ) => $product['name'],
+				$this->t( 'Quantity' ) => $product['cart_quantity']
+            ];
+		}
+
+        return str_replace("\u0022","\\\\\"", json_encode($products_array, JSON_HEX_QUOT));
+    }
+
+    /**
+     * 
+     */
     private function errorMessage($string)
+    {
+        return $this->t($string);
+    }
+
+    /**
+     * 
+     */
+    private function t($string)
     {
         return $this->module->l($string);
     }

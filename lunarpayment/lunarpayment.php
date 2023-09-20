@@ -37,6 +37,7 @@ class LunarPayment extends PaymentModule
 		$this->author    = 'Lunar';
 		$this->bootstrap = true;
 		$this->ps_versions_compliancy = ['min' => '1.7', 'max' => _PS_VERSION_];
+		// $this->controllers = ['card', 'mobilepay'];
 
 		$this->currencies      = true;
 		$this->currencies_mode = 'checkbox';
@@ -153,7 +154,6 @@ class LunarPayment extends PaymentModule
 												. $this->tab . '&module_name=lunarpayment';
 		$helper->tpl_vars      			   = [
 			'fields_value' => $this->getConfigFieldsValues(),
-			// 'languages'    => $this->context->controller->getLanguages(),
 			'id_language'  => $this->context->language->id
 		];
 
@@ -194,55 +194,7 @@ class LunarPayment extends PaymentModule
 		if (!$this->active) {
             return;
         }
-
-		// $products       = $params['cart']->getProducts();
-		// $products_array = [];
-		// $products_label = [];
-		// $p              = 0;
-		// foreach ( $products as $product ) {
-		// 	$products_array[]     = array(
-		// 		$this->l( 'ID' )       => $product['id_product'],
-		// 		$this->l( 'Name' )     => $product['name'],
-		// 		$this->l( 'Quantity' ) => $product['cart_quantity']
-		// 	);
-		// 	$products_label[ $p ] = $product['quantity'] . 'x ' . $product['name'];
-		// 	$p ++;
-		// }
-
-		// $base_uri			= __PS_BASE_URI__;
-		// $redirect_url = $this->context->link->getModuleLink( $this->name, 'paymentreturn', [], true, (int) $this->context->language->id );
-
-		// $amount = $params['cart']->getOrderTotal();
-		// $currency            = new Currency( (int) $params['cart']->id_currency );
-		// $currency_code       = $currency->iso_code;
-		// $customer            = new Customer( (int) $params['cart']->id_customer );
-		// $name                = $customer->firstname . ' ' . $customer->lastname;
-		// $email               = $customer->email;
-		// $customer_address    = new Address( (int) ( $params['cart']->id_address_delivery ) );
-		// $telephone           = $customer_address->phone ?? $customer_address->phone_mobile ?? '';
-		// $address             = $customer_address->address1 . ', ' 
-		// 						. $customer_address->address2 . ', ' 
-		// 						. $customer_address->city . ', ' 
-		// 						. $customer_address->country . ' - ' 
-		// 						. $customer_address->postcode;
-
-		// return [
-		// 	'currency_code'			=> $currency_code,
-		// 	'products'				=> str_replace("\u0022","\\\\\"",json_encode(  $products_array ,JSON_HEX_QUOT)),
-		// 	'name'					=> $name,
-		// 	'email'					=> $email,
-		// 	'telephone'				=> $telephone,
-		// 	'address'				=> $address,
-		// 	'ip'					=> Tools::getRemoteAddr(),
-		// 	'locale'				=> $this->context->language->iso_code,
-		// 	'platform_version'		=> _PS_VERSION_,
-		// 	'platform'				=> [
-		// 		'name' => 'Prestashop',
-		// 		'version' => _PS_VERSION_,
-		// 	],
-		// 	'lunarPluginVersion'		=> $this->version,
-		// ];
-		
+	
 		$this->context->smarty->assign([
 			'module_path' => $this->_path,
 			'lunar_card_title' => Configuration::get($this->cardMethod->METHOD_TITLE),

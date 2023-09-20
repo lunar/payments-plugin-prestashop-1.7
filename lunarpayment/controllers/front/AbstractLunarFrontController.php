@@ -9,6 +9,7 @@ use \Context;
 use \Currency;
 use \Validate;
 use \Configuration;
+use Customer;
 use \PrestaShopLogger;
 
 
@@ -57,20 +58,21 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
         $this->setPaymentMethod($methodName);
 
         if (!$this->method) {
-            Tools::redirect('index.php?controller=order');
+            $this->errors['error_msg'] = $this->errorMessage('Payment method not loaded');
+            $this->redirectWithNotifications('index.php?controller=order');
         }
 
         $this->baseURL = __PS_BASE_URI__;
-        $this->isInstantMode = ('instant' == $this->getConfigValue($this->method->CHECKOUT_MODE));
+        $this->isInstantMode = ('instant' == $this->getConfigValue('CHECKOUT_MODE'));
 
 
-        $this->testMode = 'test' == $this->getConfigValue($this->method->TRANSACTION_MODE);
+        $this->testMode = 'test' == $this->getConfigValue('TRANSACTION_MODE');
         if ($this->testMode) {
-            $this->publicKey =  $this->getConfigValue($this->method->TEST_PUBLIC_KEY);
-            $privateKey =  $this->getConfigValue($this->method->TEST_SECRET_KEY);
+            $this->publicKey =  $this->getConfigValue('TEST_PUBLIC_KEY');
+            $privateKey =  $this->getConfigValue('TEST_SECRET_KEY');
         } else {
-            $this->publicKey = $this->getConfigValue($this->method->LIVE_PUBLIC_KEY);
-            $privateKey = $this->getConfigValue($this->method->LIVE_SECRET_KEY);
+            $this->publicKey = $this->getConfigValue('LIVE_PUBLIC_KEY');
+            $privateKey = $this->getConfigValue('LIVE_SECRET_KEY');
         }
 
         /** API Client instance */
@@ -85,7 +87,7 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     /**
      * @return void
      */
-    public function setPaymentMethod($methodName)
+    private function setPaymentMethod($methodName)
     {
         switch($methodName) {
             case LunarCardsMethod::METHOD_NAME:
@@ -105,13 +107,62 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
      */
     public function postProcess()
     {
-        file_put_contents("zzz.log", json_encode('POST PREOCESS', JSON_PRETTY_PRINT) . PHP_EOL, FILE_APPEND);
+        if (false === $this->checkIfContextIsValid() || false === $this->checkIfPaymentOptionIsAvailable()) {
+            Tools::redirect($this->context->link->getPageLink('order', true, (int) $this->context->language->id));
+        }     
+        
+        $cart = $this->context->cart;
+        $customer = new Customer($cart->id_customer);
+        
+        $orderId = (int) Order::getIdByCartId((int) $cart->id );
+
+        $this->setArgs();
+
+        Tools::redirect($this->context->link->getPageLink('order-confirmation', true, (int) $this->context->language->id,
+            [
+                'id_cart' => (int) $cart->id,
+                'id_module' => (int) $this->module->id,
+                'id_order' =>  $orderId,
+                'key' => $customer->secure_key,
+            ]
+        ));
+    }
+
+
+    /**
+     * SET ARGS
+     */
+    private function setArgs()
+    {
+        if ($this->testMode) {
+            $this->args['test'] = $this->getTestObject();
+        }
+
+        $this->args['integration'] = [
+            'key' => $this->publicKey,
+            'name' => $this->getConfigValue('SHOP_TITLE') ?? Configuration::get('PS_SHOP_NAME'),
+            'logo' => $this->getConfigValue('LOGO_URL'),
+        ];
+
+        if ($this->getConfigValue('CONFIGURATION_ID')) {
+            $this->args['mobilePayConfiguration'] = [
+                'configurationID' => $this->getConfigValue('CONFIGURATION_ID'),
+                'logo' => $this->getConfigValue('LOGO_URL'),
+            ];
+        }
+
+        $this->args['custom'] = [
+            'orderId' => $this->order->id,
+        ];
+
+        $this->args['redirectUrl'] = $this->getCurrentURL();
+        $this->args['preferredPaymentMethod'] = $this->getConfigValue('METHOD_NAME');
     }
 
     /**
      *
      */
-    protected function validateCustomer()
+    private function validateCustomer()
     {
         if (!Validate::isLoadedObject($this->context->customer)) {
             $this->errors = ['message' => 'No customer found! Please enter valid data!'];
@@ -120,14 +171,26 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     }
 
     /**
+     * @return bool
+     */
+    private function checkIfContextIsValid()
+    {
+        return true === Validate::isLoadedObject($this->context->cart)
+            && true === Validate::isUnsignedInt($this->context->cart->id_customer)
+            && true === Validate::isUnsignedInt($this->context->cart->id_address_delivery)
+            && true === Validate::isUnsignedInt($this->context->cart->id_address_invoice)
+            && false === $this->context->cart->isVirtualCart();
+    }
+
+    /**
      * Check that this payment option is still available 
      * (maybe someone saved the url or changed other things)
      *
      * @return bool
      */
-    protected function checkIfPaymentOptionIsAvailable()
+    private function checkIfPaymentOptionIsAvailable()
     {
-        if (!$this->getConfigValue($this->method->METHOD_STATUS)) {
+        if (!$this->getConfigValue('METHOD_STATUS')) {
             return false;
         }
 
@@ -150,15 +213,16 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     /**
      * 
      */
-    protected function redirectBack()
+    private function redirectBack()
     {
-        $this->redirectWithNotifications($this->getCurrentURL());
+        // $this->redirectWithNotifications($this->getCurrentURL());
+        Tools::redirect($this->getCurrentURL());
     }
 
-        /**
+    /**
      * Parses api transaction response for errors
      */
-    protected function parseApiTransactionResponse($transaction)
+    private function parseApiTransactionResponse($transaction)
     {
         if (! $this->isTransactionSuccessful($transaction)) {
             PrestaShopLogger::addLog("Transaction with error: " . json_encode($transaction, JSON_PRETTY_PRINT));
@@ -174,7 +238,7 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
      * 
      * @return bool
      */
-    protected function isTransactionSuccessful($transaction)
+    private function isTransactionSuccessful($transaction)
     {   
         $matchCurrency = Currency::getIsoCodeById($this->order->id_currency) == $transaction['amount']['currency'];
         $matchAmount = $this->args['amount']['decimal'] == $transaction['amount']['decimal'];
@@ -187,7 +251,7 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
      * @param array $result The result returned by the api wrapper.
      * @return string
      */
-    protected function getResponseError($result)
+    private function getResponseError($result)
     {
         $error = [];
         // if this is just one error
@@ -212,7 +276,7 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     /**
      *
      */
-    protected function getTestObject(): array
+    private function getTestObject(): array
     {
         return [
             "card"        => [
@@ -240,11 +304,15 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     }
     
     /**
-     *
+     * @return string|null
      */
-    protected function getConfigValue($configKey)
+    private function getConfigValue($configKey)
     {
-        return Configuration::get($configKey);
+        if (isset($this->method->{$configKey})) {
+            return Configuration::get($this->method->{$configKey});
+        }
+
+        return null;
     }
 
     /**

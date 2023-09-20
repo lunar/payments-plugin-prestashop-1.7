@@ -10,8 +10,6 @@ class LunarpaymentCardsModuleFrontController extends AbstractLunarFrontControlle
 {
     public function __construct()
     {
-        parent::__construct();
-        
-        $this->initialize(new LunarMobilePayMethod($this->module));
+        parent::__construct(LunarMobilePayMethod::METHOD_NAME);
     }
 }

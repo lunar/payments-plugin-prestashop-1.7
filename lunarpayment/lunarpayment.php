@@ -24,8 +24,8 @@ use Lunar\Payment\methods\LunarMobilePayMethod;
  */
 class LunarPayment extends PaymentModule 
 {
-	private LunarCardsMethod $cardsMethod;
-	private LunarMobilePayMethod $mobilePayMethod;
+	public LunarCardsMethod $cardsMethod;
+	public LunarMobilePayMethod $mobilePayMethod;
 
 	/**
 	 * 

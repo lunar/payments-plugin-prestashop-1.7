@@ -3,6 +3,7 @@
 namespace Lunar\Payment\controllers\front;
 
 use \Order;
+use \Tools;
 use \Module;
 use \Context;
 use \Currency;
@@ -12,6 +13,8 @@ use \PrestaShopLogger;
 
 
 use Lunar\Lunar as ApiClient;
+use Lunar\Payment\methods\LunarCardsMethod;
+use Lunar\Payment\methods\LunarMobilePayMethod;
 
 if (!defined('_PS_VERSION_')) {
     exit;
@@ -28,7 +31,7 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     /** 
      * @var LunarCardsMethod|LunarMobilePayMethod|null $method 
      */
-    protected $method;
+    protected $method = null;
     
     private ApiClient $lunarApiClient;
     public $errors = [];
@@ -44,25 +47,18 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     private string $publicKey = '';
 
 
-    public function __construct()
+    public function __construct(string $methodName)
     {
         parent::__construct();
         $this->setTemplate('module:lunarpayment/views/templates/front/empty.tpl');
                 
         $this->validateCustomer();
 
+        $this->setPaymentMethod($methodName);
 
-        // $allValues = Tools::getAllValues();
-
-        // Tools::redirect();  
-    }
-
-    /**
-     * 
-     */
-    public function initialize($method)
-    {
-        $this->method = $method;
+        if (!$this->method) {
+            Tools::redirect('index.php?controller=order');
+        }
 
         $this->baseURL = __PS_BASE_URI__;
         $this->isInstantMode = ('instant' == $this->getConfigValue($this->method->CHECKOUT_MODE));
@@ -79,6 +75,28 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
 
         /** API Client instance */
         $this->lunarApiClient = new ApiClient($privateKey);  
+
+
+        // $allValues = Tools::getAllValues();
+
+        // Tools::redirect();  
+    }
+
+    /**
+     * @return void
+     */
+    public function setPaymentMethod($methodName)
+    {
+        switch($methodName) {
+            case LunarCardsMethod::METHOD_NAME:
+                $this->method = $this->module->cardsMethod;
+                break;
+            case LunarMobilePayMethod::METHOD_NAME:
+                $this->method = $this->module->mobilePayMethod;
+                break;
+            default:
+                return;  
+        }
     }
 
 
@@ -227,5 +245,13 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     protected function getConfigValue($configKey)
     {
         return Configuration::get($configKey);
+    }
+
+    /**
+     * 
+     */
+    private function errorMessage($string)
+    {
+        return $this->module->l($string);
     }
 }

@@ -10,16 +10,16 @@ use \Configuration;
 /**
  * 
  */
-class LunarCardsMethod extends AbstractLunarMethod
+class LunarCardMethod extends AbstractLunarMethod
 {
-    const METHOD_NAME = 'Cards';
+    const METHOD_NAME = 'card';
     
     public string $METHOD_NAME = self::METHOD_NAME;
     public string $DESCRIPTION = 'Secure payment with card via © Lunar';
-    public string $FILE_NAME = 'cardsmethod';
+    public string $FILE_NAME = 'cardmethod';
 	public string $ACCEPTED_CARDS = '';
 
-    protected $tabName = 'lunar_cards';
+    protected $tabName = 'lunar_card';
 
 
     public function __construct($module)

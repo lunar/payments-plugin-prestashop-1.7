@@ -6,7 +6,7 @@ use Lunar\Payment\controllers\front\AbstractLunarFrontController;
 /**
  * 
  */
-class LunarpaymentCardsModuleFrontController extends AbstractLunarFrontController
+class LunarpaymentCardModuleFrontController extends AbstractLunarFrontController
 {
     public function __construct()
     {

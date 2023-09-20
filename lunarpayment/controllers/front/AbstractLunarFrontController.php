@@ -14,7 +14,7 @@ use \PrestaShopLogger;
 
 
 use Lunar\Lunar as ApiClient;
-use Lunar\Payment\methods\LunarCardsMethod;
+use Lunar\Payment\methods\LunarCardMethod;
 use Lunar\Payment\methods\LunarMobilePayMethod;
 
 if (!defined('_PS_VERSION_')) {
@@ -30,7 +30,7 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     const TEST_REMOTE_URL = 'https://hosted-checkout-git-develop-lunar-app.vercel.app/?id=';
 
     /** 
-     * @var LunarCardsMethod|LunarMobilePayMethod|null $method 
+     * @var LunarCardMethod|LunarMobilePayMethod|null $method 
      */
     protected $method = null;
     
@@ -90,8 +90,8 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     private function setPaymentMethod($methodName)
     {
         switch($methodName) {
-            case LunarCardsMethod::METHOD_NAME:
-                $this->method = $this->module->cardsMethod;
+            case LunarCardMethod::METHOD_NAME:
+                $this->method = $this->module->cardMethod;
                 break;
             case LunarMobilePayMethod::METHOD_NAME:
                 $this->method = $this->module->mobilePayMethod;
@@ -109,7 +109,7 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     {
         if (false === $this->checkIfContextIsValid() || false === $this->checkIfPaymentOptionIsAvailable()) {
             Tools::redirect($this->context->link->getPageLink('order', true, (int) $this->context->language->id));
-        }     
+        }        
         
         $cart = $this->context->cart;
         $customer = new Customer($cart->id_customer);
@@ -190,7 +190,7 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
      */
     private function checkIfPaymentOptionIsAvailable()
     {
-        if (!$this->getConfigValue('METHOD_STATUS')) {
+        if ('enabled' != $this->getConfigValue('METHOD_STATUS')) {
             return false;
         }
 
@@ -200,7 +200,6 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
             return false;
         }
 
-        // @TODO change module check with method check
         foreach ($modules as $module) {
             if (isset($module['name']) && $this->module->name === $module['name']) {
                 return true;

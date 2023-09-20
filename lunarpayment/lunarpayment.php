@@ -16,7 +16,7 @@ require_once __DIR__.'/vendor/autoload.php';
 
 use Lunar\Exception\ApiException;
 use Lunar\Lunar as ApiClient;
-use Lunar\Payment\methods\LunarCardsMethod;
+use Lunar\Payment\methods\LunarCardMethod;
 use Lunar\Payment\methods\LunarMobilePayMethod;
 
 /**
@@ -24,7 +24,7 @@ use Lunar\Payment\methods\LunarMobilePayMethod;
  */
 class LunarPayment extends PaymentModule 
 {
-	public LunarCardsMethod $cardsMethod;
+	public LunarCardMethod $cardMethod;
 	public LunarMobilePayMethod $mobilePayMethod;
 
 	/**
@@ -47,7 +47,7 @@ class LunarPayment extends PaymentModule
 
 		parent::__construct();
 
-		$this->cardsMethod = new LunarCardsMethod($this);
+		$this->cardMethod = new LunarCardMethod($this);
 		$this->mobilePayMethod = new LunarMobilePayMethod($this);
 	}
 
@@ -66,7 +66,7 @@ class LunarPayment extends PaymentModule
 			&& $this->registerHook( 'actionOrderStatusPostUpdate' )
 			&& $this->registerHook( 'actionOrderSlipAdd' )
 			&& $this->createDbTables()
-			&& $this->cardsMethod->install()
+			&& $this->cardMethod->install()
 			&& $this->mobilePayMethod->install()
 		);
 	}
@@ -84,7 +84,7 @@ class LunarPayment extends PaymentModule
                 PRIMARY KEY			(`id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;" )
 
-			&& $this->cardsMethod->createSeedLogosTable()
+			&& $this->cardMethod->createSeedLogosTable()
 		);
 	}
 
@@ -94,7 +94,7 @@ class LunarPayment extends PaymentModule
 			parent::uninstall()
 			&& Db::getInstance()->execute( 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . "lunar_transactions`" )
 			&& Db::getInstance()->execute( 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . "lunar_logos`" )
-			&& $this->cardsMethod->uninstall()
+			&& $this->cardMethod->uninstall()
 			&& $this->mobilePayMethod->uninstall()
 		);
 	}
@@ -110,7 +110,7 @@ class LunarPayment extends PaymentModule
 	public function getContent() {
 		if ( Tools::isSubmit( 'submitLunar' ) ) {
 			if (
-				$this->cardsMethod->updateConfiguration()
+				$this->cardMethod->updateConfiguration()
 				&& $this->mobilePayMethod->updateConfiguration()
 			) {
 				$this->context->controller->confirmations[] = $this->l( 'Settings were saved successfully' );
@@ -126,17 +126,17 @@ class LunarPayment extends PaymentModule
 
 	public function renderForm()
 	{
-		$cards_fields_form = $this->cardsMethod->getFormFields();
+		$card_fields_form = $this->cardMethod->getFormFields();
 		$mobilepay_fields_form = $this->mobilePayMethod->getFormFields();
 
 		// we want only inputs to be merged
-		$form_fields['form']['legend'] = $cards_fields_form['form']['legend'];
+		$form_fields['form']['legend'] = $card_fields_form['form']['legend'];
 		$form_fields['form']['tabs'] = [
-			'lunar_cards' => $this->l('Cards Configuration'),
+			'lunar_card' => $this->l('Card Configuration'),
 			'lunar_mobilepay' => $this->l('Mobile Pay Configuration'),
 		];
-		$form_fields['form']['input'] = array_merge_recursive($cards_fields_form['form']['input'], $mobilepay_fields_form['form']['input']);
-		$form_fields['form']['submit'] = $cards_fields_form['form']['submit'];
+		$form_fields['form']['input'] = array_merge_recursive($card_fields_form['form']['input'], $mobilepay_fields_form['form']['input']);
+		$form_fields['form']['submit'] = $card_fields_form['form']['submit'];
 
 
 		$lang                              = new Language( (int) Configuration::get( 'PS_LANG_DEFAULT' ) );
@@ -172,11 +172,11 @@ class LunarPayment extends PaymentModule
 	 * 
 	 */
 	public function getConfigFieldsValues() {
-		$lunarCardsConfigValues = $this->cardsMethod->getConfiguration();
+		$lunarCardConfigValues = $this->cardMethod->getConfiguration();
 		$lunarMobilePayConfigValues = $this->mobilePayMethod->getConfiguration();
 
 		return array_merge(
-			$lunarCardsConfigValues,
+			$lunarCardConfigValues,
 			$lunarMobilePayConfigValues
 		);
 	}
@@ -245,9 +245,9 @@ class LunarPayment extends PaymentModule
 		
 		$this->context->smarty->assign([
 			'module_path' => $this->_path,
-			'lunar_cards_title' => Configuration::get($this->cardsMethod->METHOD_TITLE),
-			'lunar_cards_desc' => Configuration::get($this->cardsMethod->METHOD_DESCRIPTION),
-			'accepted_cards' => explode( ',', Configuration::get( $this->cardsMethod->ACCEPTED_CARDS ) ),
+			'lunar_card_title' => Configuration::get($this->cardMethod->METHOD_TITLE),
+			'lunar_card_desc' => Configuration::get($this->cardMethod->METHOD_DESCRIPTION),
+			'accepted_cards' => explode( ',', Configuration::get( $this->cardMethod->ACCEPTED_CARDS ) ),
 			'lunar_mobilepay_title'	=> Configuration::get($this->mobilePayMethod->METHOD_TITLE),
 			'lunar_mobilepay_desc' => Configuration::get($this->mobilePayMethod->METHOD_DESCRIPTION),
 		]);
@@ -255,10 +255,10 @@ class LunarPayment extends PaymentModule
 		$payment_options = [];
 
 		if (
-			'enabled' == Configuration::get( $this->cardsMethod->METHOD_STATUS)
-			&& $this->cardsMethod->isConfigured()
+			'enabled' == Configuration::get( $this->cardMethod->METHOD_STATUS)
+			&& $this->cardMethod->isConfigured()
 		) {
-			$payment_options[] = $this->cardsMethod->getPaymentOption();
+			$payment_options[] = $this->cardMethod->getPaymentOption();
 		}
 
 		if (

@@ -32,7 +32,7 @@
             <img src="{$module_path}logo.png" style="float:left; vertical-align: middle; margin-right: 10px; width:57px; height:57px;" alt="" />
             
             <div style="float:left; width:100%">
-                <span style="margin-right: 10px;">{l s={$lunar_cards_title} mod=lunarpayment}</span>
+                <span style="margin-right: 10px;">{l s={$lunar_card_title} mod=lunarpayment}</span>
                 <span>
                     <ul class="cards">
                         {foreach from=$accepted_cards item=logo}
@@ -43,7 +43,7 @@
                     </ul>
                 </span>
                 <small style="font-size: 12px; display: block; font-weight: normal; letter-spacing: 1px; max-width:100%;">
-                    {l s={$lunar_cards_desc} mod=lunarpayment}
+                    {l s={$lunar_card_desc} mod=lunarpayment}
                 </small>
             </div>
 

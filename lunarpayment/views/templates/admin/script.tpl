@@ -14,11 +14,11 @@
         /** Hide or show TEST inputs on module configuration page */
         if (
             "debug" !== document.location.search.match(/debug/gi)?.toString() 
-            && "live" === $(`#LUNAR_Cards_TRANSACTION_MODE`).val()
+            && "live" === $(`#LUNAR_card_TRANSACTION_MODE`).val()
         ) {
-            $(`#LUNAR_Cards_TRANSACTION_MODE`).closest(".form-group").hide();
-            $(`#LUNAR_Cards_TEST_SECRET_KEY`).closest(".form-group").hide();
-            $(`#LUNAR_Cards_TEST_PUBLIC_KEY`).closest(".form-group").hide();
+            $(`#LUNAR_card_TRANSACTION_MODE`).closest(".form-group").hide();
+            $(`#LUNAR_card_TEST_SECRET_KEY`).closest(".form-group").hide();
+            $(`#LUNAR_card_TEST_PUBLIC_KEY`).closest(".form-group").hide();
         }
         if (
             "debug" !== document.location.search.match(/debug/gi)?.toString() 

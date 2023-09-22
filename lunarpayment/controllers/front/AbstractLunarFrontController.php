@@ -2,15 +2,16 @@
 
 namespace Lunar\Payment\controllers\front;
 
-use Address;
+use \Db;
+use \Cart;
 use \Order;
 use \Tools;
 use \Module;
-use \Context;
+use \Address;
 use \Currency;
+use \Customer;
 use \Validate;
 use \Configuration;
-use Customer;
 use \PrestaShopLogger;
 
 
@@ -34,19 +35,17 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     /** 
      * @var LunarCardMethod|LunarMobilePayMethod|null $method 
      */
-    protected $method = null;
+    protected $paymentMethod = null;
     
     private ApiClient $lunarApiClient;
+
     public $errors = [];
-    private string $transactionId = '';
     private string $intentIdKey = '_lunar_intent_id';
-    private string $baseURL = '';
     private bool $testMode = false;
     private bool $isInstantMode = false;
     private ?Order $order = null;
+    private ?Cart $cart = null;
     private array $args = [];
-    private string $paymentIntentId = '';
-    private string $controllerURL = 'lunar/index/HostedCheckout';
     private string $publicKey = '';
 
 
@@ -57,7 +56,7 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
                 
         $this->setPaymentMethod($methodName);
 
-        if (!$this->method) {
+        if (!$this->paymentMethod) {
             $this->redirectBackWithNotification('Payment method not loaded');
         }
     }
@@ -69,10 +68,10 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     {
         switch($methodName) {
             case LunarCardMethod::METHOD_NAME:
-                $this->method = $this->module->cardMethod;
+                $this->paymentMethod = $this->module->cardMethod;
                 break;
             case LunarMobilePayMethod::METHOD_NAME:
-                $this->method = $this->module->mobilePayMethod;
+                $this->paymentMethod = $this->module->mobilePayMethod;
                 break;
             default:
                 return;  
@@ -86,9 +85,7 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     {
         parent::init();
 
-        $this->baseURL = __PS_BASE_URI__;
-        $this->isInstantMode = ('instant' == $this->getConfigValue('CHECKOUT_MODE'));
-
+        $this->cart = $this->context->cart;
 
         $this->testMode = 'test' == $this->getConfigValue('TRANSACTION_MODE');
         if ($this->testMode) {
@@ -108,52 +105,84 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
      */
     public function postProcess()
     {
+
+        // @TODO move bellow code to another controller (paymentreturn)
+        // also move the following methods
+        // parseApiTransactionResponse()
+        // isTransactionSuccessful()
+        // getResponseError()
+
+        if (Tools::getValue('cart_id')) {
+
+            $this->isInstantMode = ('instant' == $this->getConfigValue('CHECKOUT_MODE'));
+
+            $this->cart = new \Cart(Tools::getValue('cart_id'));
+
+            $customer  = new Customer((int) $this->cart->id_customer);
+
+            $paymentIntentId = $this->getPaymentIntentFromCart();
+
+            if (!$paymentIntentId) {
+                
+            }
+
+            $orderIsValid = $this->module->validateOrder(
+                $this->cart->id, 
+                $this->getConfigValue('ORDER_STATUS'), 
+                $this->cart->getOrderTotal(), 
+                $this->module->displayName . ' (' . ucfirst($this->paymentMethod->METHOD_NAME) . ')', 
+                NULL,
+                [
+                    'transaction_id' => $paymentIntentId
+                ], 
+                (int) $this->cart->id_currency, 
+                false, 
+                $customer->secure_key
+            );
+
+            $orderId = (int) Order::getIdByCartId((int) $this->cart->id );
+
+
+            if ($orderIsValid) {
+                // @TODO save transaction in lunar_transactions table
+            }
+
+            Tools::redirect($this->context->link->getPageLink('order-confirmation', true,
+                (int) $this->context->language->id,
+                [
+                    'id_cart' => (int) $this->cart->id,
+                    'id_module' => (int) $this->module->id,
+                    'id_order' =>  $orderId,
+                    'key' => $customer->secure_key,
+                ]
+            ));
+        } 
+
+
         $this->validate();
-        
-        $cart = $this->context->cart;
-        
-        $orderId = (int) Order::getIdByCartId((int) $cart->id );
-        
+                
         $this->setArgs();
 
-        try {
-            $this->paymentIntentId = $this->lunarApiClient->payments()->create($this->args);
-        } catch(ApiException $e) {
-            $this->redirectBackWithNotification($e->getMessage());
+        $paymentIntentId = $this->getPaymentIntentFromCart();
+
+        if (! $paymentIntentId) {
+            try {
+                $paymentIntentId = $this->lunarApiClient->payments()->create($this->args);
+            } catch(ApiException $e) {
+                $this->redirectBackWithNotification($e->getMessage());
+            }
         }
 
-        // if (! $this->getPaymentIntentFromOrder()) {
-        //     try {
-        //         $this->paymentIntentId = $this->lunarApiClient->payments()->create($this->args);
-        //     } catch(ApiException $e) {
-        //         $this->redirectBackWithNotification($e->getMessage());
-        //     }
-        // }
-
-        // if (! $this->paymentIntentId) {
-        //     $this->redirectBackWithNotification('An error occurred creating payment for order. Please try again or contact system administrator.'); // <a href="/">Go to homepage</a>'
-        // }
-
-        // $this->savePaymentIntentOnOrder();
-
-        // @TODO use $this->redirect_after ?
-
-        $redirectUrl = self::REMOTE_URL . $this->paymentIntentId;
-        if(isset($this->args['test'])) {
-            $redirectUrl = self::TEST_REMOTE_URL . $this->paymentIntentId;
+        if (! $paymentIntentId) {
+            $this->redirectBackWithNotification('An error occurred creating payment for order. Please try again or contact system administrator.'); // <a href="/">Go to homepage</a>'
         }
 
-        Tools::redirect($redirectUrl);
-        
-        // Tools::redirect($this->context->link->getPageLink('order-confirmation', true,
-        //     (int) $this->context->language->id,
-        //     [
-        //         'id_cart' => (int) $cart->id,
-        //         'id_module' => (int) $this->module->id,
-        //         'id_order' =>  $orderId,
-        //         'key' => $customer->secure_key,
-        //     ]
-        // ));
+        $this->savePaymentIntentOnCart($paymentIntentId);
+
+        /** @see ControllerCore $redirect_after */
+        $this->redirect_after = isset($this->args['test'])
+                                ? self::TEST_REMOTE_URL . $paymentIntentId
+                                : self::REMOTE_URL . $paymentIntentId;
     }
 
 
@@ -166,18 +195,17 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
             $this->args['test'] = $this->getTestObject();
         }
 
-        $cart      = $this->context->cart;
-        $customer  = new Customer( (int) $cart->id_customer );
+        $customer  = new Customer( (int) $this->cart->id_customer );
         $name      = $customer->firstname . ' ' . $customer->lastname;
         $email     = $customer->email;
-        $address   = new Address( (int) ( $cart->id_address_delivery ) );
+        $address   = new Address( (int) ( $this->cart->id_address_delivery ) );
         $telephone = $address->phone ?? $address->phone_mobile ?? '';
         $address   = $address->address1 . ', ' . $address->address2 . ', ' . $address->city 
                     . ', ' . $address->country . ' - ' . $address->postcode;
 
         $this->args['amount'] = [
             'currency' => $this->context->currency->iso_code,
-            'decimal' => (string) $cart->getOrderTotal(),
+            'decimal' => (string) $this->cart->getOrderTotal(),
         ];
 
         $this->args['custom'] = [
@@ -209,8 +237,51 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
             ];
         }
 
-        $this->args['redirectUrl'] = $this->getCurrentURL();
-        $this->args['preferredPaymentMethod'] = $this->method->METHOD_NAME;
+        $this->args['redirectUrl'] = $this->getCurrentURL() . '&cart_id=' . $this->cart->id;
+        $this->args['preferredPaymentMethod'] = $this->paymentMethod->METHOD_NAME;
+    }
+
+    /**
+     * 
+     */
+    private function getPaymentIntentFromCart()
+    {
+        return $this->getCartCheckoutSessionData()[$this->intentIdKey] ?? '';
+    }
+
+    /**
+     * 
+     */
+    private function savePaymentIntentOnCart($paymentIntentId)
+    {
+        $cartCheckoutSessionData =  $this->getCartCheckoutSessionData();
+
+        $cartCheckoutSessionData = array_merge(
+            [$this->intentIdKey => $paymentIntentId], 
+            $cartCheckoutSessionData
+        );
+
+        return Db::getInstance()->execute(
+            'UPDATE ' . _DB_PREFIX_ . 'cart SET checkout_session_data = "' 
+                . pSQL(json_encode($cartCheckoutSessionData)) 
+                . '" WHERE id_cart = ' . (int) $this->cart->id
+        );
+    }
+
+    /**
+     * 
+     */
+    private function getCartCheckoutSessionData()
+    {
+        $rawData = Db::getInstance()->getValue(
+            'SELECT checkout_session_data FROM ' . _DB_PREFIX_ . 'cart WHERE id_cart = ' . (int) $this->cart->id
+        );
+        $cartCheckoutSessionData = json_decode($rawData ?? '', true);
+        if (!is_array($cartCheckoutSessionData)) {
+            $cartCheckoutSessionData = [];
+        }
+        
+        return $cartCheckoutSessionData;
     }
 
     /**
@@ -240,11 +311,11 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     {
         if (
             !(
-                true === Validate::isLoadedObject($this->context->cart)
-                && true === Validate::isUnsignedInt($this->context->cart->id_customer)
-                && true === Validate::isUnsignedInt($this->context->cart->id_address_delivery)
-                && true === Validate::isUnsignedInt($this->context->cart->id_address_invoice)
-                && false === $this->context->cart->isVirtualCart()
+                true === Validate::isLoadedObject($this->cart)
+                && true === Validate::isUnsignedInt($this->cart->id_customer)
+                && true === Validate::isUnsignedInt($this->cart->id_address_delivery)
+                && true === Validate::isUnsignedInt($this->cart->id_address_invoice)
+                && false === $this->cart->isVirtualCart()
             )
         ) {
             $this->redirectBackWithNotification('Context validations failed');
@@ -381,8 +452,8 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
      */
     private function getConfigValue($configKey)
     {
-        if (isset($this->method->{$configKey})) {
-            return Configuration::get($this->method->{$configKey});
+        if (isset($this->paymentMethod->{$configKey})) {
+            return Configuration::get($this->paymentMethod->{$configKey});
         }
 
         return null;

@@ -14,7 +14,7 @@ if ( ! defined( '_PS_VERSION_' ) ) {
 
 require_once __DIR__.'/vendor/autoload.php';
 
-use Lunar\Exception\ApiException;
+
 use Lunar\Lunar as ApiClient;
 use Lunar\Payment\methods\LunarCardMethod;
 use Lunar\Payment\methods\LunarMobilePayMethod;
@@ -37,7 +37,7 @@ class LunarPayment extends PaymentModule
 		$this->author    = 'Lunar';
 		$this->bootstrap = true;
 		$this->ps_versions_compliancy = ['min' => '1.7', 'max' => _PS_VERSION_];
-		// $this->controllers = ['card', 'mobilepay'];
+		// $this->controllers = ['redirect', 'paymentreturn'];
 
 		$this->currencies      = true;
 		$this->currencies_mode = 'checkbox';
@@ -255,15 +255,15 @@ class LunarPayment extends PaymentModule
 		}
 	}
 
-	public function storeTransactionID( $lunar_txn_id, $order_id, $total, $captured = 'NO' ) {
-		$query = 'INSERT INTO ' . _DB_PREFIX_ . 'lunar_transactions (`'
-					. 'lunar_tid`, `order_id`, `payed_amount`, `payed_at`, `captured`) VALUES ("'
+	public function storeTransaction( $lunar_txn_id, $order_id, $total, $captured = 'NO' ) {
+		$query = 'INSERT INTO ' . _DB_PREFIX_ . 'lunar_transactions ('
+					. '`lunar_tid`, `order_id`, `payed_amount`, `payed_at`, `captured`) VALUES ("'
 					. pSQL( $lunar_txn_id ) . '", "' . pSQL( $order_id ) . '", "' . pSQL( $total ) . '" , NOW(), "' . pSQL( $captured ) . '")';
 
 		return Db::getInstance()->execute( $query );
 	}
 
-	public function updateTransactionID( $lunar_txn_id, $order_id, $fields = [] ) {
+	public function updateTransaction( $lunar_txn_id, $order_id, $fields = [] ) {
 		if ( $lunar_txn_id && $order_id && ! empty( $fields ) ) {
 			$fieldsStr  = '';
 			$fieldCount = count( $fields );
@@ -294,12 +294,12 @@ class LunarPayment extends PaymentModule
 
 		if ( $order->module == $this->name ) {
 			$order_token = Tools::getAdminToken( 'AdminOrders' . (int)  Tab::getIdFromClassName('AdminOrders') . (int) $this->context->employee->id );
-			$dbModuleTransaction = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . 'lunar_transactions WHERE order_id = ' . (int) $id_order );
+			$dbLunarTransaction = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . 'lunar_transactions WHERE order_id = ' . (int) $id_order );
 			$this->context->smarty->assign( array(
 				'ps_version'         			  => _PS_VERSION_,
 				'id_order'           			  => $id_order,
 				'order_token'        			  => $order_token,
-				"lunartransaction" 				  => $dbModuleTransaction,
+				"lunartransaction" 				  => $dbLunarTransaction,
 				'not_captured_text'	  			  => $this->l('Captured Transaction prior to Refund via Lunar'),
 				'checkbox_text' 	  			  => $this->l('Refund Lunar')
 			) );
@@ -364,15 +364,17 @@ class LunarPayment extends PaymentModule
 		$id_order    = $params['id_order'];
 
 		/* Skip if no module transaction */
-		$dbModuleTransaction = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . 'lunar_transactions WHERE order_id = ' . (int) $id_order );
-		if ( empty( $dbModuleTransaction ) ) {
+		$dbLunarTransaction = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . 'lunar_transactions WHERE order_id = ' . (int) $id_order );
+		if ( empty( $dbLunarTransaction ) ) {
 			return false;
 		}
 
 		/* If Capture or Cancel */
-		if ( $order_state->id == (int) Configuration::get( self::ORDER_STATUS ) || $order_state->id == (int) Configuration::get( 'PS_OS_CANCELED' ) ) {
+		// if ( $order_state->id == (int) Configuration::get( self::ORDER_STATUS ) || $order_state->id == (int) Configuration::get( 'PS_OS_CANCELED' ) ) {
+		if ( $order_state->id == 5 || $order_state->id == (int) Configuration::get( 'PS_OS_CANCELED' ) ) {
 			/* If custom Captured status  */
-			if ( $order_state->id == (int) Configuration::get( self::ORDER_STATUS ) ) {
+			// if ( $order_state->id == (int) Configuration::get( self::ORDER_STATUS ) ) {
+			if ( $order_state->id == 5 ) {
 				$response = $this->doPaymentAction($id_order,"capture");
 			}
 
@@ -551,9 +553,9 @@ class LunarPayment extends PaymentModule
 	 */
 	 protected function doPaymentAction($id_order, $plugin_action, $change_status = false, $plugin_amount_to_refund = 0){
 		$order                 = new Order( (int) $id_order );
-		$dbModuleTransaction   = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . "lunar_transactions WHERE order_id = " . (int) $id_order );
-		$isTransactionCaptured = $dbModuleTransaction['captured'] == 'YES';
-		$transactionId         = $dbModuleTransaction["lunar_tid"];
+		$dbLunarTransaction   = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . "lunar_transactions WHERE order_id = " . (int) $id_order );
+		$isTransactionCaptured = $dbLunarTransaction['captured'] == 'YES';
+		$transactionId         = $dbLunarTransaction["lunar_tid"];
 
 		$secretKey = Configuration::get( self::TRANSACTION_MODE ) == 'live'
 						? Configuration::get( self::LIVE_SECRET_KEY )
@@ -572,7 +574,7 @@ class LunarPayment extends PaymentModule
 						'warning' => 1,
 						'message' => $this->displayErrors( $this->l('Transaction already Captured.') ),
 					);
-				} elseif ( isset( $dbModuleTransaction ) ) {
+				} elseif ( isset( $dbLunarTransaction ) ) {
 					$amount   = ( ! empty( $fetch['transaction']['pendingAmount'] ) ) ? (int) $fetch['transaction']['pendingAmount'] : 0;
 
 					if ( $amount ) {
@@ -601,7 +603,7 @@ class LunarPayment extends PaymentModule
 								$fields = array(
 									'captured' => 'YES',
 								);
-								$this->updateTransactionID( $transactionId, (int) $id_order, $fields );
+								$this->updateTransaction( $transactionId, (int) $id_order, $fields );
 
 								/* Set message */
 								$message = 'Trx ID: ' . $transactionId . '
@@ -653,7 +655,7 @@ class LunarPayment extends PaymentModule
 						'warning' => 1,
 						'message' => $this->displayErrors( $this->l('You need to Captured Transaction prior to Refund.') ),
 					);
-				} elseif ( isset( $dbModuleTransaction ) ) {
+				} elseif ( isset( $dbLunarTransaction ) ) {
 
 					if ( ! Validate::isPrice( $plugin_amount_to_refund ) ) {
 						$response = array(
@@ -685,9 +687,9 @@ class LunarPayment extends PaymentModule
 
 								/* Update transaction details */
 								$fields = array(
-									'refunded_amount' => $dbModuleTransaction['refunded_amount'] + $plugin_amount_to_refund,
+									'refunded_amount' => $dbLunarTransaction['refunded_amount'] + $plugin_amount_to_refund,
 								);
-								$this->updateTransactionID( $transactionId, (int) $id_order, $fields );
+								$this->updateTransaction( $transactionId, (int) $id_order, $fields );
 
 								/* Set message */
 								$message = 'Trx ID: ' . $transactionId . '
@@ -734,7 +736,7 @@ class LunarPayment extends PaymentModule
 						'warning' => 1,
 						'message' => $this->displayErrors( $this->l('You can\'t Cancel transaction now . It\'s already Captured, try to Refund.') ),
 					);
-				} elseif ( isset( $dbModuleTransaction ) ) {
+				} elseif ( isset( $dbLunarTransaction ) ) {
 
 					/* Cancel transaction */
 					$amount = (int) $fetch['transaction']['amount'] - $fetch['transaction']['refundedAmount'];

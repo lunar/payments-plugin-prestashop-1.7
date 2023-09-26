@@ -16,12 +16,12 @@ class LunarpaymentRedirectModuleFrontController extends AbstractLunarFrontContro
     {               
         $this->setArgs();
 
-        $paymentIntentId = $this->getPaymentIntentFromCart();
+        $paymentIntentId = $this->getPaymentIntentCookie();
 
         if (! $paymentIntentId) {
             try {
                 $paymentIntentId = $this->lunarApiClient->payments()->create($this->args);
-                $this->savePaymentIntentOnCart($paymentIntentId);
+                $this->savePaymentIntentCookie($paymentIntentId);
             } catch(ApiException $e) {
                 $this->redirectBackWithNotification($e->getMessage());
             }

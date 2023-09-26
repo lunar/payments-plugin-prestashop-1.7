@@ -1,9 +1,5 @@
 <?php
 
-use \Order;
-use \Customer;
-use \OrderCore;
-use \Configuration;
 use Lunar\Exception\ApiException;
 use Lunar\Payment\controllers\front\AbstractLunarFrontController;
 
@@ -12,11 +8,16 @@ use Lunar\Payment\controllers\front\AbstractLunarFrontController;
  */
 class LunarpaymentPaymentReturnModuleFrontController extends AbstractLunarFrontController 
 {
-    private OrderCore $order;
+    public $display_column_right;
+    public $display_column_left;
+
     private Customer $customer;
-    private $currencyCode = '';
-    private $totalAmount = '';
+    private string $currencyCode = '';
+    private string $totalAmount = '';
     private string $paymentIntentId = '';
+    private bool $captured = false;
+    private bool $cartWasTampered = false;
+    private string $errorMessage = '';
 
     public function __construct() {
         parent::__construct();
@@ -26,94 +27,78 @@ class LunarpaymentPaymentReturnModuleFrontController extends AbstractLunarFrontC
 
     public function postProcess()
     {
-        $captured = 'NO';
-        $errorResponse = null;
-        $delayedMode = ('delayed' == $this->getConfigValue('CHECKOUT_MODE'));
-        
+        $instantMode = ('instant' == $this->getConfigValue('CHECKOUT_MODE'));
+        $orderStatusCode = $instantMode ? $this->getConfigValue('ORDER_STATUS') : Configuration::get('PS_OS_PAYMENT');
+
         $this->customer  = new Customer((int) $this->cart->id_customer);
         $this->totalAmount = (string) $this->cart->getOrderTotal(true, Cart::BOTH);
         $this->currencyCode = Currency::getIsoCodeById((int) $this->cart->id_currency);
 
-        $paymentIntentId = $this->getPaymentIntentFromCart();
+        $this->paymentIntentId = $this->getPaymentIntentCookie();
 
-        if (!$paymentIntentId) {
-            // @TOTO cancel payment (get intent from cookie)
-            // $this->redirectBackWithNotification('The current cart has been modified. Your payment has been cancelled. Please make another payment.');
-            $this->redirectBackWithNotification('The current cart has been modified. <br> Please make another payment.');
+        if (!$this->paymentIntentId) {
+            $this->redirectBackWithNotification('The payment intent id wasn\'t found.');
         }
 
         try {
-            $apiResponse = $this->lunarApiClient->payments()->fetch($paymentIntentId);
+            $apiResponse = $this->lunarApiClient->payments()->fetch($this->paymentIntentId);
 
             if (!$this->parseApiTransactionResponse($apiResponse)) {
-                $errorResponse = $apiResponse;
+                !$this->cartWasTampered 
+                    ? $this->errorMessage = $this->getResponseError($apiResponse)
+                    : null;
                 throw new PrestaShopPaymentException();
             }
 
-            if ($delayedMode) {
-                $data = [
-                    'amount' => [
-                        'currency' => $this->currencyCode,
-                        'decimal' => $this->totalAmount,
-                    ],
-                ];
+            if ($instantMode) {
+                $captureResponse = $this->lunarApiClient->payments()->capture($this->paymentIntentId, $this->getPaymentData());
 
-                $response = $this->lunarApiClient->payments()->capture($paymentIntentId, $data);
-
-                if ('completed' == $response['captureState']) {
-                    $captured = 'YES';
+                if (!empty($captureResponse) && 'completed' == $captureResponse['captureState']) {
+                    $this->captured = true;
                 } else {
-                    $errorResponse = $response;
+                    $this->errorMessage = 'Capture payment failed. Please try again or contact system administrator.';
+                    $this->maybeCancelPayment();
                     throw new PrestaShopPaymentException();
                 }
             }
 
-            $orderStatusCode = $delayedMode ? Configuration::get('PS_OS_PAYMENT') : $this->getConfigValue('ORDER_STATUS');
-
-            if ($this->orderValidation($orderStatusCode)) {
-                $message = 'Trx ID: ' . $paymentIntentId . '
-                    Authorized Amount: ' . $this->totalAmount . '
-                    Captured Amount: ' . $captured == 'YES' ? $this->totalAmount : '0' . '
-                    Order time: ' . 'test_time' . '
-                    Currency code: ' . $this->currencyCode;
-
-                $message = strip_tags($message, '<br>');
-                $this->maybeAddOrderMessage($message);
-                
-            } else {
-                $this->lunarApiClient->payments()->cancel($paymentIntentId, ['amount' => $this->totalAmount]); //Cancel Order
-                $this->redirectBackWithNotification('Error validating the order. Plase contact system administrator');
-            }
-
         } catch (ApiException $e) {
-            $errorResponse = ['text' => $e->getMessage()];
-        } catch (\PrestaShopPaymentException $ppe) {
-            // parsed bellow
+            $this->errorMessage = $e->getMessage();
+
+        } catch (PrestaShopPaymentException $ppe) {
+            // stored in errorMessage
+
+        } catch (\Exception $ex) {
+            PrestaShopLogger::addLog("Lunar general exception: " . json_encode($ex->getMessage()));
         }
 
-        if ($errorResponse) {
-            return $this->redirectToErrorPage($errorResponse);
+        if ($this->errorMessage) {
+            return $this->redirectBackWithNotification($this->errorMessage);
         }
 
-        $this->module->storeTransactionID($paymentIntentId, $this->module->currentOrder, $this->totalAmount, $captured);
-        
-        $this->redirect_after = $this->context->link->getPageLink('order-confirmation', true,
-            (int) $this->context->language->id,
-            [
-                'id_cart' => (int) $this->cart->id,
-                'id_module' => (int) $this->module->id,
-                'id_order' => $this->module->currentOrder,
-                'key' => $this->customer->secure_key,
-            ]
-        );
+        if ($this->orderValidation($orderStatusCode)) {
+            $this->maybeAddOrderMessage();
+
+        } else {
+            $this->errorMessage = 'Failed validating the order. Please try again or contact system administrator. ';
+            $this->maybeCancelPayment();
+                   
+            return $this->redirectToErrorPage();
+        }
+
+        $this->storeLunarTransaction();
+
+        $this->context->cookie->__unset($this->intentIdKey);
+
+        $this->redirect_after = $this->buildRedirectLink();
     }
 
     /**
      * 
      */
-    private function orderValidation($orderStatusCode)
+    private function orderValidation($orderStatusCode): bool
     {
-        $isValidOrder = $this->module->validateOrder(
+        return $this->module->validateOrder(
             $this->cart->id, 
             $orderStatusCode, 
             $this->cart->getOrderTotal(), 
@@ -126,37 +111,60 @@ class LunarpaymentPaymentReturnModuleFrontController extends AbstractLunarFrontC
             false, 
             $this->customer->secure_key
         );
-
-        if ($isValidOrder) {
-            $this->order = Order::getByCartId($this->cart->id);
-        }
-
-        return $isValidOrder;
     }
     
     /**
      * 
      */
-    private function redirectToErrorPage($transactionResult = null)
+    private function buildRedirectLink(): string
+    {
+        return $this->context->link->getPageLink(
+                'order-confirmation', 
+                true,
+                (int) $this->context->language->id,
+                [
+                    'id_cart' => (int) $this->cart->id,
+                    'id_module' => (int) $this->module->id,
+                    'id_order' => $this->module->currentOrder,
+                    'key' => $this->customer->secure_key,
+                ]
+            );
+    }
+
+    /**
+     * 
+     */
+    private function getPaymentData(): array
+    {
+        return [
+            'amount' => [
+                'currency' => $this->currencyCode,
+                'decimal' => $this->totalAmount,
+            ],
+        ];
+    }
+    
+    /**
+     * 
+     */
+    private function redirectToErrorPage(): void
     {
         $data = ["lunar_order_error" => 1];
 
-        $transactionResult 
-            ? $data + ["lunar_error_message" => $this->getResponseError($transactionResult)]
-            : null;
+        $this->errorMessage ? array_merge($data, ["lunar_error_message" => $this->errorMessage]) : null;
 
         $this->context->smarty->assign($data);
         
-        return $this->setTemplate('module:lunarpayment/views/templates/front/payment_error.tpl');
+        $this->setTemplate('module:lunarpayment/views/templates/front/payment_error.tpl');
     }
 
     /**
      * Parses api transaction response for errors
      */
-    private function parseApiTransactionResponse($transaction)
+    private function parseApiTransactionResponse($transaction): bool
     {
         if (! $this->isTransactionSuccessful($transaction)) {
-            PrestaShopLogger::addLog("Transaction with error: " . json_encode($transaction, JSON_PRETTY_PRINT));
+            PrestaShopLogger::addLog("Transaction with error: " . json_encode($transaction));
             return false;
         }
 
@@ -166,23 +174,45 @@ class LunarpaymentPaymentReturnModuleFrontController extends AbstractLunarFrontC
     /**
      * Checks if the transaction was successful and
      * the data was not tempered with.
-     * 
-     * @return bool
      */
-    private function isTransactionSuccessful($transaction)
+    private function isTransactionSuccessful($transaction): bool
     {   
-        $matchCurrency = $this->currencyCode == $transaction['amount']['currency'];
-        $matchAmount = $this->totalAmount == $transaction['amount']['decimal'];
+        $matchCurrency = $this->currencyCode == ($transaction['amount']['currency'] ?? '');
+        $matchAmount = $this->totalAmount == ($transaction['amount']['decimal'] ?? '');
+        
+        if (true == $transaction['authorisationCreated'] && !($matchCurrency && $matchAmount)) {
+            $this->cartWasTampered = true;
+            $this->errorMessage .= ' Currency or Amount doesn\'t match. Data was tampered. ';
+            $this->maybeCancelPayment();
+            return false;
+        }
 
         return (true == $transaction['authorisationCreated'] && $matchCurrency && $matchAmount);
+    }
+
+    
+    /**
+     * 
+     */
+    private function maybeCancelPayment(): void
+    {
+        // cancel only authorized payments
+        if (!$this->captured) {
+            $result = $this->lunarApiClient->payments()->cancel($this->paymentIntentId, $this->getPaymentData());
+        }
+
+        if (!empty($result) && 'completed' == $result['cancelState']) {
+            $this->errorMessage .= 'Your authorized payment was cancelled.';
+        }
+
+        $this->context->cookie->__unset($this->intentIdKey);
     }
 
     /**
      * Gets errors from a failed api request
      * @param array $result The result returned by the api wrapper.
-     * @return string
      */
-    private function getResponseError($result)
+    private function getResponseError($result): string
     {
         $error = [];
         // if this is just one error
@@ -207,9 +237,30 @@ class LunarpaymentPaymentReturnModuleFrontController extends AbstractLunarFrontC
     /**
      * 
      */
-    private function maybeAddOrderMessage($message)
+    private function storeLunarTransaction(): bool
     {
-        if (! Validate::isCleanHtml($message)) {
+        return $this->module->storeTransaction(
+            $this->paymentIntentId, 
+            $this->module->currentOrder, 
+            $this->totalAmount, 
+            $this->captured ? 'YES' : 'NO'
+        );
+    }
+
+    /**
+     * 
+     */
+    private function maybeAddOrderMessage(): void
+    {
+        $message = 'Trx ID: ' . $this->paymentIntentId . '
+                    Authorized Amount: ' . $this->totalAmount . '
+                    Captured Amount: ' . $this->captured ? $this->totalAmount : '0' . '
+                    Order time: ' . date('Y-m-d H:i:s') . '
+                    Currency code: ' . $this->currencyCode;
+
+        $message = strip_tags($message, '<br>');
+
+        if (! Validate::isCleanHtml($message) || !$this->module->currentOrder) {
             return;
         }
 

@@ -25,9 +25,10 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     const REMOTE_URL = 'https://pay.lunar.money/?id=';
     const TEST_REMOTE_URL = 'https://hosted-checkout-git-develop-lunar-app.vercel.app/?id=';
 
-    /** 
-     * @var LunarCardMethod|LunarMobilePayMethod|null $method 
-     */
+    /** @var Lunarpayment */
+    public $module;
+
+    /** @var LunarCardMethod|LunarMobilePayMethod|null */
     protected $paymentMethod = null;
     
     protected ApiClient $lunarApiClient;
@@ -96,44 +97,18 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     /**
      * 
      */
-    protected function getPaymentIntentFromCart()
+    protected function getPaymentIntentCookie()
     {
-        return $this->getCartCheckoutSessionData()[$this->intentIdKey] ?? '';
+        return $this->context->cookie->{$this->intentIdKey};
     }
 
     /**
      * 
      */
-    protected function savePaymentIntentOnCart($paymentIntentId)
+    protected function savePaymentIntentCookie($paymentIntentId)
     {
-        $cartCheckoutSessionData =  $this->getCartCheckoutSessionData();
-
-        $cartCheckoutSessionData = array_merge(
-            [$this->intentIdKey => $paymentIntentId], 
-            $cartCheckoutSessionData
-        );
-
-        return Db::getInstance()->execute(
-            'UPDATE ' . _DB_PREFIX_ . 'cart SET checkout_session_data = "' 
-                . pSQL(json_encode($cartCheckoutSessionData)) 
-                . '" WHERE id_cart = ' . (int) $this->cart->id
-        );
-    }
-
-    /**
-     * 
-     */
-    protected function getCartCheckoutSessionData()
-    {
-        $rawData = Db::getInstance()->getValue(
-            'SELECT checkout_session_data FROM ' . _DB_PREFIX_ . 'cart WHERE id_cart = ' . (int) $this->cart->id
-        );
-        $cartCheckoutSessionData = json_decode($rawData ?? '', true);
-        if (!is_array($cartCheckoutSessionData)) {
-            $cartCheckoutSessionData = [];
-        }
-        
-        return $cartCheckoutSessionData;
+        $this->context->cookie->__set($this->intentIdKey, $paymentIntentId);
+        $this->context->cookie->write();
     }
 
     /**

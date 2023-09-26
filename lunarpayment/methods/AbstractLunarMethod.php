@@ -35,7 +35,6 @@ abstract class AbstractLunarMethod
     public $module;
     public Context $context;
     protected $tabName;
-	protected string $controllerName;
     protected array $validationPublicKeys = ['live' => [], 'test' => []];
 
     /**
@@ -44,7 +43,6 @@ abstract class AbstractLunarMethod
 	protected function __construct($module) {
         $this->module = $module;
 		$this->context = Context::getContext();
-		$this->controllerName = $this->METHOD_NAME;
 		
         $configKeyBegin = 'LUNAR_' . $this->METHOD_NAME;
 
@@ -73,7 +71,7 @@ abstract class AbstractLunarMethod
 
 		return $paymentOption->setModuleName( $this->module->name )
 					->setCallToActionText(Configuration::get($this->METHOD_TITLE))
-					->setAction( $this->context->link->getModuleLink( $this->module->name, $this->controllerName, [], true ) )
+					->setAction( $this->context->link->getModuleLink( $this->module->name, 'redirect', ['lunar_method' => $this->METHOD_NAME], true ) )
 					->setAdditionalInformation( $this->context->smarty->fetch('module:lunarpayment/views/templates/hook/' . $this->FILE_NAME . '.tpl' ) );
 		
     }

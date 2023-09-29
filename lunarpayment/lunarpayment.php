@@ -308,12 +308,13 @@ class LunarPayment extends PaymentModule
 		}
 	}
 
-	public function displayErrors( $string = 'Fatal error', $htmlentities = true, Context $context = null ) {
-		if ( true ) {
-			return ( Tools::htmlentitiesUTF8( 'Lunar: ' . stripslashes( $string ) ) . '<br/>' );
+	public function displayErrors( $string = 'Fatal error', $translated = true, $htmlentities = true, Context $context = null ) {
+		if ( !$htmlentities ) {
+			return $this->trans( 'Fatal error', [], 'Admin.Notifications.Error' );
 		}
-
-		return Context::getContext()->getTranslator()->trans( 'Fatal error', [], 'Admin.Notifications.Error' );
+		
+		$translated ? $string = $this->trans($string) : null;
+		return ( Tools::htmlentitiesUTF8( 'Lunar: ' . stripslashes( $string ) ) . '<br/>' );
 	}
 
 	public function hookActionOrderSlipAdd( $params ){
@@ -572,7 +573,7 @@ class LunarPayment extends PaymentModule
 				if ( $isTransactionCaptured ) {
 					$response = array(
 						'warning' => 1,
-						'message' => $this->displayErrors( $this->l('Transaction already Captured.') ),
+						'message' => $this->displayErrors('Transaction already Captured.'),
 					);
 				} elseif ( isset( $dbLunarTransaction ) ) {
 					$amount   = ( ! empty( $fetch['transaction']['pendingAmount'] ) ) ? (int) $fetch['transaction']['pendingAmount'] : 0;
@@ -590,7 +591,7 @@ class LunarPayment extends PaymentModule
 							PrestaShopLogger::addLog( $capture['message'] );
 							$response = array(
 								'error'   => 1,
-								'message' => $this->displayErrors( $capture['message'] ),
+								'message' => $this->displayErrors( $capture['message'], false ),
 							);
 						} else {
 							if ( ! empty( $capture['transaction'] ) ) {
@@ -618,18 +619,18 @@ class LunarPayment extends PaymentModule
 								/* Set response */
 								$response = array(
 									'success' => 1,
-									'message' => $this->displayErrors( $this->l('Transaction successfully Captured.') ),
+									'message' => $this->displayErrors('Transaction successfully Captured.'),
 								);
 							} else {
 								if ( ! empty( $capture[0]['message'] ) ) {
 									$response = array(
 										'warning' => 1,
-										'message' => $this->displayErrors( $capture[0]['message'] ),
+										'message' => $this->displayErrors( $capture[0]['message'], false ),
 									);
 								} else {
 									$response = array(
 										'error'   => 1,
-										'message' => $this->displayErrors( $this->l('Oops! An error occurred while Capture.') ),
+										'message' => $this->displayErrors('Oops! An error occurred while Capture.'),
 									);
 								}
 							}
@@ -637,13 +638,13 @@ class LunarPayment extends PaymentModule
 					} else {
 						$response = array(
 							'error'   => 1,
-							'message' => $this->displayErrors( $this->l('Invalid amount to Capture.') ),
+							'message' => $this->displayErrors('Invalid amount to Capture.'),
 						);
 					}
 				} else {
 					$response = array(
 						'error'   => 1,
-						'message' => $this->displayErrors( $this->l('Invalid Lunar Transaction.') ),
+						'message' => $this->displayErrors('Invalid Lunar Transaction.'),
 					);
 				}
 
@@ -653,14 +654,14 @@ class LunarPayment extends PaymentModule
 				if ( ! $isTransactionCaptured ) {
 					$response = array(
 						'warning' => 1,
-						'message' => $this->displayErrors( $this->l('You need to Captured Transaction prior to Refund.') ),
+						'message' => $this->displayErrors('You need to Captured Transaction prior to Refund.'),
 					);
 				} elseif ( isset( $dbLunarTransaction ) ) {
 
 					if ( ! Validate::isPrice( $plugin_amount_to_refund ) ) {
 						$response = array(
 							'error'   => 1,
-							'message' => $this->displayErrors( $this->l('Invalid amount to Refund.') ),
+							'message' => $this->displayErrors('Invalid amount to Refund.'),
 						);
 					} else {
 						/* Refund transaction */
@@ -676,7 +677,7 @@ class LunarPayment extends PaymentModule
 							PrestaShopLogger::addLog( $refund['message'] );
 							$response = array(
 								'error'   => 1,
-								'message' => $this->displayErrors( $refund['message'] ),
+								'message' => $this->displayErrors( $refund['message'], false ),
 							);
 						} else {
 							if ( ! empty( $refund['transaction'] ) ) {
@@ -704,18 +705,18 @@ class LunarPayment extends PaymentModule
 								/* Set response */
 								$response = array(
 									'success' => 1,
-									'message' => $this->displayErrors( $this->l('Transaction successfully Refunded.') ),
+									'message' => $this->displayErrors('Transaction successfully Refunded.'),
 								);
 							} else {
 								if ( ! empty( $refund[0]['message'] ) ) {
 									$response = array(
 										'warning' => 1,
-										'message' => $this->displayErrors( $refund[0]['message'] ),
+										'message' => $this->displayErrors( $refund[0]['message'], false ),
 									);
 								} else {
 									$response = array(
 										'error'   => 1,
-										'message' => $this->displayErrors( $this->l('Oops! An error occurred while Refund.') ),
+										'message' => $this->displayErrors('Oops! An error occurred while Refund.'),
 									);
 								}
 							}
@@ -724,7 +725,7 @@ class LunarPayment extends PaymentModule
 				} else {
 					$response = array(
 						'error'   => 1,
-						'message' => $this->displayErrors( $this->l('Invalid Lunar Transaction.') ),
+						'message' => $this->displayErrors('Invalid Lunar Transaction.'),
 					);
 				}
 
@@ -734,7 +735,7 @@ class LunarPayment extends PaymentModule
 				if ( $isTransactionCaptured ) {
 					$response = array(
 						'warning' => 1,
-						'message' => $this->displayErrors( $this->l('You can\'t Cancel transaction now . It\'s already Captured, try to Refund.') ),
+						'message' => $this->displayErrors('You can\'t Cancel transaction now . It\'s already Captured, try to Refund.'),
 					);
 				} elseif ( isset( $dbLunarTransaction ) ) {
 
@@ -750,7 +751,7 @@ class LunarPayment extends PaymentModule
 						PrestaShopLogger::addLog( $cancel['message'] );
 						$response = array(
 							'error'   => 1,
-							'message' => $this->displayErrors( $cancel['message'] ),
+							'message' => $this->displayErrors( $cancel['message'], false ),
 						);
 					} else {
 						if ( ! empty( $cancel['transaction'] ) ) {
@@ -772,18 +773,18 @@ class LunarPayment extends PaymentModule
 							/* Set response */
 							$response = array(
 								'success' => 1,
-								'message' => $this->displayErrors( $this->l('Transaction successfully Canceled.') ),
+								'message' => $this->displayErrors('Transaction successfully Canceled.'),
 							);
 						} else {
 							if ( ! empty( $cancel[0]['message'] ) ) {
 								$response = array(
 									'warning' => 1,
-									'message' => $this->displayErrors( $cancel[0]['message'] ),
+									'message' => $this->displayErrors( $cancel[0]['message'], false ),
 								);
 							} else {
 								$response = array(
 									'error'   => 1,
-									'message' => $this->displayErrors( $this->l('Oops! An error occurred while Cancel.') ),
+									'message' => $this->displayErrors('Oops! An error occurred while Cancel.'),
 								);
 							}
 						}
@@ -791,7 +792,7 @@ class LunarPayment extends PaymentModule
 				} else {
 					$response = array(
 						'error'   => 1,
-						'message' => $this->displayErrors( $this->l('Invalid Lunar Transaction.') ),
+						'message' => $this->displayErrors('Invalid Lunar Transaction.'),
 					);
 				}
 				break;

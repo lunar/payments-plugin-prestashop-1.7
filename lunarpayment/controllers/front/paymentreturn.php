@@ -243,6 +243,7 @@ class LunarpaymentPaymentReturnModuleFrontController extends AbstractLunarFrontC
             $this->paymentIntentId, 
             $this->module->currentOrder, 
             $this->totalAmount, 
+            $this->paymentMethod->METHOD_NAME, 
             $this->captured ? 'YES' : 'NO'
         );
     }

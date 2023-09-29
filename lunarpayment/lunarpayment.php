@@ -82,6 +82,7 @@ class LunarPayment extends PaymentModule
                 `payed_amount`		DECIMAL(20,6) NOT NULL,
                 `refunded_amount`	DECIMAL(20,6) NOT NULL,
                 `captured`		    VARCHAR(255) NOT NULL,
+                `method`		    VARCHAR(50) NOT NULL,
                 PRIMARY KEY			(`id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;" )
 
@@ -255,10 +256,15 @@ class LunarPayment extends PaymentModule
 		}
 	}
 
-	public function storeTransaction( $lunar_txn_id, $order_id, $total, $captured = 'NO' ) {
+	public function storeTransaction( $lunar_txn_id, $order_id, $total, $method, $captured = 'NO' ) {
 		$query = 'INSERT INTO ' . _DB_PREFIX_ . 'lunar_transactions ('
-					. '`lunar_tid`, `order_id`, `payed_amount`, `payed_at`, `captured`) VALUES ("'
-					. pSQL( $lunar_txn_id ) . '", "' . pSQL( $order_id ) . '", "' . pSQL( $total ) . '" , NOW(), "' . pSQL( $captured ) . '")';
+					. '`lunar_tid`, `order_id`, `payed_amount`, `payed_at`, `captured`, `method`) VALUES ("'
+					. pSQL( $lunar_txn_id ) . '", "' 
+					. pSQL( $order_id ) . '", "' 
+					. pSQL( $total ) 
+					. '" , NOW(), "' 
+					. pSQL( $captured ) . '", "' 
+					. pSQL( $method ) . '")';
 
 		return Db::getInstance()->execute( $query );
 	}

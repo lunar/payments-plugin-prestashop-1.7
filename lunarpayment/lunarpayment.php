@@ -446,102 +446,102 @@ class LunarPayment extends PaymentModule
 			die( json_encode( $response ) );
 		}
 
-		if ( Tools::getIsset( 'upload_logo' ) ) {
-			$logo_name = Tools::getValue( 'logo_name' );
+		// if ( Tools::getIsset( 'upload_logo' ) ) {
+		// 	$logo_name = Tools::getValue( 'logo_name' );
 
-			if ( empty( $logo_name ) ) {
-				$response = array(
-					'status'  => 0,
-					'message' => 'Please give logo name.'
-				);
-				die( json_encode( $response ) );
-			}
+		// 	if ( empty( $logo_name ) ) {
+		// 		$response = array(
+		// 			'status'  => 0,
+		// 			'message' => 'Please give logo name.'
+		// 		);
+		// 		die( json_encode( $response ) );
+		// 	}
 
-			$logo_slug = Tools::strtolower( str_replace( ' ', '-', $logo_name ) );
-			$sql       = new DbQuery();
-			$sql->select( '*' );
-			$sql->from( "lunar_logos", 'PL' );
-			$sql->where( 'PL.slug = "' . pSQL($logo_slug) . '"' );
-			$logos = Db::getInstance()->executes( $sql );
-			if ( ! empty( $logos ) ) {
-				$response = array(
-					'status'  => 0,
-					'message' => 'This name already exists.'
-				);
-				die( json_encode( $response ) );
-			}
+		// 	$logo_slug = Tools::strtolower( str_replace( ' ', '-', $logo_name ) );
+		// 	$sql       = new DbQuery();
+		// 	$sql->select( '*' );
+		// 	$sql->from( "lunar_logos", 'PL' );
+		// 	$sql->where( 'PL.slug = "' . pSQL($logo_slug) . '"' );
+		// 	$logos = Db::getInstance()->executes( $sql );
+		// 	if ( ! empty( $logos ) ) {
+		// 		$response = array(
+		// 			'status'  => 0,
+		// 			'message' => 'This name already exists.'
+		// 		);
+		// 		die( json_encode( $response ) );
+		// 	}
 
-			if ( ! empty( $_FILES['logo_file']['name'] ) ) {
-				$target_dir    = _PS_MODULE_DIR_ . $this->name . '/views/img/';
-				$name          = basename( $_FILES['logo_file']["name"] );
-				$path_parts    = pathinfo( $name );
-				$extension     = $path_parts['extension'];
-				$file_name     = $logo_slug . '.' . $extension;
-				$target_file   = $target_dir . basename( $file_name );
-				$imageFileType = pathinfo( $target_file, PATHINFO_EXTENSION );
+		// 	if ( ! empty( $_FILES['logo_file']['name'] ) ) {
+		// 		$target_dir    = _PS_MODULE_DIR_ . $this->name . '/views/img/';
+		// 		$name          = basename( $_FILES['logo_file']["name"] );
+		// 		$path_parts    = pathinfo( $name );
+		// 		$extension     = $path_parts['extension'];
+		// 		$file_name     = $logo_slug . '.' . $extension;
+		// 		$target_file   = $target_dir . basename( $file_name );
+		// 		$imageFileType = pathinfo( $target_file, PATHINFO_EXTENSION );
 
-				/*$check = getimagesize($_FILES['logo_file']["tmp_name"]);
-                if($check === false) {
-                    $response = array(
-                        'status' => 0,
-                        'message' => 'File is not an image. Please upload JPG, JPEG, PNG or GIF file.'
-                    );
-                    die(json_encode($response));
-                }*/
+		// 		/*$check = getimagesize($_FILES['logo_file']["tmp_name"]);
+        //         if($check === false) {
+        //             $response = array(
+        //                 'status' => 0,
+        //                 'message' => 'File is not an image. Please upload JPG, JPEG, PNG or GIF file.'
+        //             );
+        //             die(json_encode($response));
+        //         }*/
 
-				// Check if file already exists
-				if ( file_exists( $target_file ) ) {
-					$response = array(
-						'status'  => 0,
-						'message' => 'Sorry, file already exists.'
-					);
-					die( json_encode( $response ) );
-				}
+		// 		// Check if file already exists
+		// 		if ( file_exists( $target_file ) ) {
+		// 			$response = array(
+		// 				'status'  => 0,
+		// 				'message' => 'Sorry, file already exists.'
+		// 			);
+		// 			die( json_encode( $response ) );
+		// 		}
 
-				// Allow certain file formats
-				if ( $imageFileType != "jpg" && $imageFileType != "png" && $imageFileType != "jpeg"
-				     && $imageFileType != "gif" && $imageFileType != "svg" ) {
-					$response = array(
-						'status'  => 0,
-						'message' => 'Sorry, only JPG, JPEG, PNG, GIF & SVG files are allowed.'
-					);
-					die( json_encode( $response ) );
-				}
+		// 		// Allow certain file formats
+		// 		if ( $imageFileType != "jpg" && $imageFileType != "png" && $imageFileType != "jpeg"
+		// 		     && $imageFileType != "gif" && $imageFileType != "svg" ) {
+		// 			$response = array(
+		// 				'status'  => 0,
+		// 				'message' => 'Sorry, only JPG, JPEG, PNG, GIF & SVG files are allowed.'
+		// 			);
+		// 			die( json_encode( $response ) );
+		// 		}
 
-				if ( move_uploaded_file( $_FILES['logo_file']["tmp_name"], $target_file ) ) {
-					$query = 'INSERT INTO ' . _DB_PREFIX_ . 'lunar_logos (`name`, `slug`, `file_name`, `default_logo`, `created_at`)
-								VALUES ("' . pSQL( $logo_name ) . '", "' . pSQL( $logo_slug ) . '", "' . pSQL( $file_name ) . '", 0, NOW())';
+		// 		if ( move_uploaded_file( $_FILES['logo_file']["tmp_name"], $target_file ) ) {
+		// 			$query = 'INSERT INTO ' . _DB_PREFIX_ . 'lunar_logos (`name`, `slug`, `file_name`, `default_logo`, `created_at`)
+		// 						VALUES ("' . pSQL( $logo_name ) . '", "' . pSQL( $logo_slug ) . '", "' . pSQL( $file_name ) . '", 0, NOW())';
 
-					if ( Db::getInstance()->execute( $query ) ) {
-						$response = array(
-							'status'  => 1,
-							'message' => "The file " . basename( $file_name ) . " has been uploaded."
-						);
-						//Configuration::updateValue(self::ACCEPTED_CARDS, basename($file_name));
-						die( json_encode( $response ) );
-					} else {
-						unlink( $target_file );
-						$response = array(
-							'status'  => 0,
-							'message' => "Oops! An error occured while save logo."
-						);
-						die( json_encode( $response ) );
-					}
-				} else {
-					$response = array(
-						'status'  => 0,
-						'message' => 'Sorry, there was an error uploading your file.'
-					);
-					die( json_encode( $response ) );
-				}
-			} else {
-				$response = array(
-					'status'  => 0,
-					'message' => 'Please select a file for upload.'
-				);
-				die( json_encode( $response ) );
-			}
-		}
+		// 			if ( Db::getInstance()->execute( $query ) ) {
+		// 				$response = array(
+		// 					'status'  => 1,
+		// 					'message' => "The file " . basename( $file_name ) . " has been uploaded."
+		// 				);
+		// 				//Configuration::updateValue(self::ACCEPTED_CARDS, basename($file_name));
+		// 				die( json_encode( $response ) );
+		// 			} else {
+		// 				unlink( $target_file );
+		// 				$response = array(
+		// 					'status'  => 0,
+		// 					'message' => "Oops! An error occured while save logo."
+		// 				);
+		// 				die( json_encode( $response ) );
+		// 			}
+		// 		} else {
+		// 			$response = array(
+		// 				'status'  => 0,
+		// 				'message' => 'Sorry, there was an error uploading your file.'
+		// 			);
+		// 			die( json_encode( $response ) );
+		// 		}
+		// 	} else {
+		// 		$response = array(
+		// 			'status'  => 0,
+		// 			'message' => 'Please select a file for upload.'
+		// 		);
+		// 		die( json_encode( $response ) );
+		// 	}
+		// }
 
 		if ( Tools::getValue( 'configure' ) == $this->name ) {
 			$this->context->controller->addCSS( $this->_path . 'views/css/backoffice.css' );

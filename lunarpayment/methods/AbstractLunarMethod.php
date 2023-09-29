@@ -560,7 +560,7 @@ abstract class AbstractLunarMethod
      */
     protected function t($string)
     {
-        return $this->module->trans($string);
+        return $this->module->t($string);
     }
 
     /**

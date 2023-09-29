@@ -864,6 +864,13 @@ class LunarPayment extends PaymentModule
 	/**
 	 * 
 	 */
+	public function t($string) {
+		$this->trans($string);
+	}
+
+	/**
+	 * 
+	 */
 	// public function getModalForAddMoreLogo() {
 	// 	$this->context->smarty->assign( array(
 	// 		'request_uri' => $this->context->link->getAdminLink( 'AdminOrders', false ),

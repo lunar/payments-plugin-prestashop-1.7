@@ -116,7 +116,7 @@ class LunarCardMethod extends AbstractLunarMethod
         $acceptedCardsField = [
             'type'     => 'select',
             'tab'      => $this->tabName,
-            'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Choose logos to show in frontend checkout page.' ) . '">' . $this->l( 'Accepted cards' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
+            'label'    => '<span data-toggle="tooltip" title="' . $this->t( 'Choose logos to show in frontend checkout page.' ) . '">' . $this->t( 'Accepted cards' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
             'name'     => $this->ACCEPTED_CARDS,
             'class'    => "lunar-config accepted-cards",
             'multiple' => true,

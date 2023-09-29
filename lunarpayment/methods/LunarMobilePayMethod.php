@@ -74,7 +74,7 @@ class LunarMobilePayMethod extends AbstractLunarMethod
         $configurationIDField = [
             'type'     => 'text',
             'tab'      => $this->tabName,
-            'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Get it from your Lunar dashboard' ) . '">' . $this->l( 'Configuration ID' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
+            'label'    => '<span data-toggle="tooltip" title="' . $this->t( 'Get it from your Lunar dashboard' ) . '">' . $this->t( 'Configuration ID' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
             'name'     => $this->CONFIGURATION_ID,
             'class'    => "lunar-config",
             'required' => true

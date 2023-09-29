@@ -43,8 +43,8 @@ class LunarPayment extends PaymentModule
 		$this->currencies_mode = 'checkbox';
 
 		$this->displayName      = 'Lunar';
-		$this->description      = $this->l( 'Receive payments with Lunar' );
-		$this->confirmUninstall = $this->l( 'Are you sure about removing Lunar?' );
+		$this->description      = $this->trans( 'Receive payments with Lunar' );
+		$this->confirmUninstall = $this->trans( 'Are you sure about removing Lunar?' );
 
 		parent::__construct();
 
@@ -114,7 +114,7 @@ class LunarPayment extends PaymentModule
 				$this->cardMethod->updateConfiguration()
 				&& $this->mobilePayMethod->updateConfiguration()
 			) {
-				$this->context->controller->confirmations[] = $this->l( 'Settings were saved successfully' );
+				$this->context->controller->confirmations[] = $this->trans( 'Settings were saved successfully' );
 			}
 		}
 	
@@ -133,8 +133,8 @@ class LunarPayment extends PaymentModule
 		// we want only inputs to be merged
 		$form_fields['form']['legend'] = $card_fields_form['form']['legend'];
 		$form_fields['form']['tabs'] = [
-			'lunar_card' => $this->l('Card Configuration'),
-			'lunar_mobilepay' => $this->l('Mobile Pay Configuration'),
+			'lunar_card' => $this->trans('Card Configuration'),
+			'lunar_mobilepay' => $this->trans('Mobile Pay Configuration'),
 		];
 		$form_fields['form']['input'] = array_merge_recursive($card_fields_form['form']['input'], $mobilepay_fields_form['form']['input']);
 		$form_fields['form']['submit'] = $card_fields_form['form']['submit'];
@@ -300,8 +300,8 @@ class LunarPayment extends PaymentModule
 				'id_order'           			  => $id_order,
 				'order_token'        			  => $order_token,
 				"lunartransaction" 				  => $dbLunarTransaction,
-				'not_captured_text'	  			  => $this->l('Captured Transaction prior to Refund via Lunar'),
-				'checkbox_text' 	  			  => $this->l('Refund Lunar')
+				'not_captured_text'	  			  => $this->trans('Captured Transaction prior to Refund via Lunar'),
+				'checkbox_text' 	  			  => $this->trans('Refund Lunar')
 			) );
 
 			return $this->display( __FILE__, 'views/templates/hook/admin-order.tpl' );

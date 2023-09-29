@@ -321,7 +321,7 @@ abstract class AbstractLunarMethod
 	// public function validateAppKeyField( $value, $mode ) {
 	// 	/** Check if the key value is empty **/
 	// 	if ( ! $value ) {
-	// 		return $this->l( 'The App Key is required!' );
+	// 		return $this->t( 'The App Key is required!' );
 	// 	}
 	// 	/** Load the client from API**/
 	// 	$apiClient = new ApiClient( $value );
@@ -330,7 +330,7 @@ abstract class AbstractLunarMethod
 	// 		$identity = $apiClient->apps()->fetch();
 	// 	} catch ( ApiException $exception ) {
 	// 		PrestaShopLogger::addLog( $exception );
-	// 		return $this->l( "The App Key doesn't seem to be valid!");
+	// 		return $this->t( "The App Key doesn't seem to be valid!");
 	// 	}
 
 	// 	try {
@@ -351,8 +351,8 @@ abstract class AbstractLunarMethod
 	// 	/** Check if public keys array for the current mode is populated **/
 	// 	if ( empty( $this->validationPublicKeys[$mode] ) ) {
 	// 		/** Generate the error based on the current mode **/
-	// 		// $error = $this->l( 'The '.$mode .' App Key is not valid or set to '.array_values(array_diff(array_keys($this->validationPublicKeys), array($mode)))[0].' mode!' );
-	// 		$error = $this->l( 'The App Key is not valid or set to different mode!' );
+	// 		// $error = $this->t( 'The '.$mode .' App Key is not valid or set to '.array_values(array_diff(array_keys($this->validationPublicKeys), array($mode)))[0].' mode!' );
+	// 		$error = $this->t( 'The App Key is not valid or set to different mode!' );
 	// 		PrestaShopLogger::addLog( $error );
 	// 		return $error;
 	// 	}
@@ -370,11 +370,11 @@ abstract class AbstractLunarMethod
 	// public function validatePublicKeyField($value, $mode) {
 	// 	/** Check if the key value is not empty **/
 	// 	if ( ! $value ) {
-	// 		return $this->l( 'The Public Key is required!' );
+	// 		return $this->t( 'The Public Key is required!' );
 	// 	}
 	// 	/** Check if the local stored public keys array is empty OR the key is not in public keys list **/
 	// 	if ( empty( $this->validationPublicKeys[$mode] ) || ! in_array( $value, $this->validationPublicKeys[$mode] ) ) {
-	// 		$error = $this->l( 'The Public Key doesn\'t seem to be valid!' );
+	// 		$error = $this->t( 'The Public Key doesn\'t seem to be valid!' );
 	// 		PrestaShopLogger::addLog( $error );
 	// 		return $error;
 	// 	}
@@ -399,7 +399,7 @@ abstract class AbstractLunarMethod
         return [
 			'form' => array(
 				'legend' => array(
-					'title' => $this->l( 'Lunar Payments Settings' ),
+					'title' => $this->t( 'Lunar Payments Settings' ),
 					'icon'  => 'icon-cogs'
 				),
 				'input'  => array(
@@ -408,7 +408,7 @@ abstract class AbstractLunarMethod
                         'tab'     => $this->tabName,
 						'lang'    => true,
 						'name'    => $this->METHOD_STATUS,
-						'label'   => $this->l( 'Status' ),
+						'label'   => $this->t( 'Status' ),
 						'class'   => "lunar-config",
 						'options' => array(
 							'query' => array(
@@ -429,7 +429,7 @@ abstract class AbstractLunarMethod
 						'type'     => 'select',
                         'tab'      => $this->tabName,
 						'lang'     => true,
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'In test mode, you can create a successful transaction with the card number 4111 1111 1111 1111 with any CVC and a valid expiration date.' ) . '">' . $this->l( 'Transaction mode' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
+						'label'    => '<span data-toggle="tooltip" title="' . $this->t( 'In test mode, you can create a successful transaction with the card number 4111 1111 1111 1111 with any CVC and a valid expiration date.' ) . '">' . $this->t( 'Transaction mode' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
 						'name'     => $this->TRANSACTION_MODE,
 						'class'    => "lunar-config",
 						'options'  => array(
@@ -451,7 +451,7 @@ abstract class AbstractLunarMethod
 					array(
 						'type'     => 'text',
                         'tab'      => $this->tabName,
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Get it from your Lunar dashboard' ) . '">' . $this->l( 'Test mode App Key' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
+						'label'    => '<span data-toggle="tooltip" title="' . $this->t( 'Get it from your Lunar dashboard' ) . '">' . $this->t( 'Test mode App Key' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
 						'name'     => $this->TEST_SECRET_KEY,
 						'class'    => "lunar-config",
 						'required' => true,
@@ -459,7 +459,7 @@ abstract class AbstractLunarMethod
 					array(
 						'type'     => 'text',
                         'tab'      => $this->tabName,
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Get it from your Lunar dashboard' ) . '">' . $this->l( 'Test mode Public Key' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
+						'label'    => '<span data-toggle="tooltip" title="' . $this->t( 'Get it from your Lunar dashboard' ) . '">' . $this->t( 'Test mode Public Key' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
 						'name'     => $this->TEST_PUBLIC_KEY,
 						'class'    => "lunar-config",
 						'required' => true,
@@ -467,7 +467,7 @@ abstract class AbstractLunarMethod
 					array(
 						'type'     => 'text',
                         'tab'      => $this->tabName,
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Get it from your Lunar dashboard' ) . '">' . $this->l( 'App Key' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
+						'label'    => '<span data-toggle="tooltip" title="' . $this->t( 'Get it from your Lunar dashboard' ) . '">' . $this->t( 'App Key' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
 						'name'     => $this->LIVE_SECRET_KEY,
 						'class'    => "lunar-config",
 						'required' => true,
@@ -475,7 +475,7 @@ abstract class AbstractLunarMethod
 					array(
 						'type'     => 'text',
                         'tab'      => $this->tabName,
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Get it from your Lunar dashboard' ) . '">' . $this->l( 'Public Key' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
+						'label'    => '<span data-toggle="tooltip" title="' . $this->t( 'Get it from your Lunar dashboard' ) . '">' . $this->t( 'Public Key' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
 						'name'     => $this->LIVE_PUBLIC_KEY,
 						'class'    => "lunar-config",
 						'required' => true,
@@ -483,7 +483,7 @@ abstract class AbstractLunarMethod
 					array(
 						'type'     => 'text',
                         'tab'      => $this->tabName,
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Must be a link begins with "https://" to a JPG,JPEG or PNG file' ) . '">' . $this->l( 'Logo URL' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
+						'label'    => '<span data-toggle="tooltip" title="' . $this->t( 'Must be a link begins with "https://" to a JPG,JPEG or PNG file' ) . '">' . $this->t( 'Logo URL' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
 						'name'     => $this->LOGO_URL,
 						'class'    => "lunar-config",
 						'required' => true,
@@ -492,18 +492,18 @@ abstract class AbstractLunarMethod
 						'type'     => 'select',
                         'tab'      => $this->tabName,
 						'lang'     => true,
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'If you deliver your product instantly (e.g. a digital product), choose Instant mode. If not, use Delayed' ) . '">' . $this->l( 'Capture mode' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
+						'label'    => '<span data-toggle="tooltip" title="' . $this->t( 'If you deliver your product instantly (e.g. a digital product), choose Instant mode. If not, use Delayed' ) . '">' . $this->t( 'Capture mode' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
 						'name'     => $this->CHECKOUT_MODE,
 						'class'    => "lunar-config",
 						'options'  => array(
 							'query' => array(
 								array(
 									'id_option' => 'delayed',
-									'name'      => $this->l( 'Delayed' ),
+									'name'      => $this->t( 'Delayed' ),
 								),
 								array(
 									'id_option' => 'instant',
-									'name'      => $this->l( 'Instant' ),
+									'name'      => $this->t( 'Instant' ),
 								),
 							),
 							'id'    => 'id_option',
@@ -515,7 +515,7 @@ abstract class AbstractLunarMethod
 						'type'    => 'select',
                         'tab'      => $this->tabName,
 						'lang'    => true,
-						'label'   => '<span data-toggle="tooltip" title="' . $this->l( 'The transaction will be captured once the order has the chosen status' ) . '">' . $this->l( 'Capture on order status (delayed mode)' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
+						'label'   => '<span data-toggle="tooltip" title="' . $this->t( 'The transaction will be captured once the order has the chosen status' ) . '">' . $this->t( 'Capture on order status (delayed mode)' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
 						'name'    => $this->ORDER_STATUS,
 						'class'   => "lunar-config",
 						'options' => array(
@@ -527,7 +527,7 @@ abstract class AbstractLunarMethod
 					array(
 						'type'     => 'text',
                         'tab'      => $this->tabName,
-						'label'    => '<span data-toggle="tooltip" title="' . $this->l( 'Payment method title' ) . '">' . $this->l( 'Payment method title' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
+						'label'    => '<span data-toggle="tooltip" title="' . $this->t( 'Payment method title' ) . '">' . $this->t( 'Payment method title' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
 						'name'     => $this->METHOD_TITLE,
 						'class'    => "lunar-config",
 						'required' => true,
@@ -535,20 +535,20 @@ abstract class AbstractLunarMethod
 					array(
 						'type'  => 'textarea',
                         'tab'      => $this->tabName,
-						'label' => '<span data-toggle="tooltip" title="' . $this->l( 'Description' ) . '">' . $this->l( 'Description' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
+						'label' => '<span data-toggle="tooltip" title="' . $this->t( 'Description' ) . '">' . $this->t( 'Description' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
 						'name'  => $this->METHOD_DESCRIPTION,
 						'class' => "lunar-config",
 					),
 					array(
 						'type'  => 'text',
                         'tab'      => $this->tabName,
-						'label' => '<span data-toggle="tooltip" title="' . $this->l( 'The text shown in the page where the customer is redirected' ) . '">' . $this->l( 'Shop title' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
+						'label' => '<span data-toggle="tooltip" title="' . $this->t( 'The text shown in the page where the customer is redirected' ) . '">' . $this->t( 'Shop title' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
 						'name'  => $this->SHOP_TITLE,
 						'class' => "lunar-config",
 					),
 				),
 				'submit' => array(
-					'title' => $this->l( 'Save' ),
+					'title' => $this->t( 'Save' ),
 				),
 
 			),
@@ -558,9 +558,9 @@ abstract class AbstractLunarMethod
     /**
      * 
      */
-    protected function l($string)
+    protected function t($string)
     {
-        return $this->module->l($string);
+        return $this->module->trans($string);
     }
 
     /**
@@ -568,6 +568,6 @@ abstract class AbstractLunarMethod
      */
     protected function errorMessage($string)
     {
-        return $this->l($string) . " ($this->METHOD_NAME)";
+        return $this->t($string) . " ($this->METHOD_NAME)";
     }
 }

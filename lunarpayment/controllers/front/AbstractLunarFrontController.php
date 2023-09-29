@@ -215,6 +215,6 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
      */
     protected function t($string)
     {
-        return $this->module->l($string);
+        return $this->module->trans($string);
     }
 }

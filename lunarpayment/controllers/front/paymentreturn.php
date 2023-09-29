@@ -102,7 +102,7 @@ class LunarpaymentPaymentReturnModuleFrontController extends AbstractLunarFrontC
             $this->cart->id, 
             $orderStatusCode, 
             $this->cart->getOrderTotal(), 
-            $this->module->displayName . ' (' . $this->paymentMethod->METHOD_NAME . ')', 
+            $this->module->displayName . ' (' . ucfirst($this->paymentMethod->METHOD_NAME) . ')', 
             null,
             [
                 'transaction_id' => $this->paymentIntentId

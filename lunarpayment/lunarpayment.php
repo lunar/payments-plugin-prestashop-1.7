@@ -16,6 +16,7 @@ require_once __DIR__.'/vendor/autoload.php';
 
 
 use Lunar\Lunar as ApiClient;
+use Lunar\Payment\classes\AdminOrderHelper;
 use Lunar\Payment\methods\LunarCardMethod;
 use Lunar\Payment\methods\LunarMobilePayMethod;
 
@@ -26,6 +27,7 @@ class LunarPayment extends PaymentModule
 {
 	public LunarCardMethod $cardMethod;
 	public LunarMobilePayMethod $mobilePayMethod;
+	private AdminOrderHelper $adminOrderHelper;
 
 	/**
 	 * 
@@ -48,6 +50,7 @@ class LunarPayment extends PaymentModule
 
 		parent::__construct();
 
+		$this->adminOrderHelper = new AdminOrderHelper($this);
 		$this->cardMethod = new LunarCardMethod($this);
 		$this->mobilePayMethod = new LunarMobilePayMethod($this);
 	}
@@ -99,6 +102,23 @@ class LunarPayment extends PaymentModule
 			&& $this->cardMethod->uninstall()
 			&& $this->mobilePayMethod->uninstall()
 		);
+	}
+
+	/**
+	 * 
+	 */
+	public function getPaymentMethodByName(string $methodName)
+	{
+        switch($methodName) {
+            case LunarCardMethod::METHOD_NAME:
+                return $this->cardMethod;
+                break;
+            case LunarMobilePayMethod::METHOD_NAME:
+                return $this->mobilePayMethod;
+                break;
+            default:
+                return null;  
+        }
 	}
 
 	public function getPSV() {
@@ -235,7 +255,7 @@ class LunarPayment extends PaymentModule
 	}
 
 	/**
-	 * 
+	 * @TODO is this used?
 	 */
 	private function paymentReturn( $params ) {
 		if ( ! $this->active || ! isset( $params['objOrder'] ) || $params['objOrder']->module != $this->name ) {
@@ -269,38 +289,13 @@ class LunarPayment extends PaymentModule
 		return Db::getInstance()->execute( $query );
 	}
 
-	public function updateTransaction( $lunar_txn_id, $order_id, $fields = [] ) {
-		if ( $lunar_txn_id && $order_id && ! empty( $fields ) ) {
-			$fieldsStr  = '';
-			$fieldCount = count( $fields );
-			$counter    = 0;
-
-			foreach ( $fields as $field => $value ) {
-				$counter ++;
-				$fieldsStr .= '`' . pSQL( $field ). '` = "' . pSQL( $value ) . '"';
-
-				if ( $counter < $fieldCount ) {
-					$fieldsStr .= ', ';
-				}
-			}
-
-			$query = 'UPDATE ' . _DB_PREFIX_ . 'lunar_transactions SET ' . $fieldsStr
-						. ' WHERE `' . 'lunar_tid`="' . pSQL( $lunar_txn_id )
-						. '" AND `order_id`="' . (int)$order_id . '"';
-
-			return Db::getInstance()->execute( $query );
-		} else {
-			return false;
-		}
-	}
-
 	public function hookDisplayAdminOrder( $params ) {
 		$id_order = $params['id_order'];
 		$order    = new Order( (int) $id_order );
 
 		if ( $order->module == $this->name ) {
 			$order_token = Tools::getAdminToken( 'AdminOrders' . (int)  Tab::getIdFromClassName('AdminOrders') . (int) $this->context->employee->id );
-			$dbLunarTransaction = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . 'lunar_transactions WHERE order_id = ' . (int) $id_order );
+			$dbLunarTransaction = $this->getLunarTransactionByOrderId($id_order);
 			$this->context->smarty->assign( array(
 				'ps_version'         			  => _PS_VERSION_,
 				'id_order'           			  => $id_order,
@@ -314,97 +309,19 @@ class LunarPayment extends PaymentModule
 		}
 	}
 
-	public function displayErrors( $string = 'Fatal error', $translated = true, $htmlentities = true, Context $context = null ) {
-		if ( !$htmlentities ) {
-			return $this->trans( 'Fatal error', [], 'Admin.Notifications.Error' );
-		}
-		
-		$translated ? $string = $this->trans($string) : null;
-		return ( Tools::htmlentitiesUTF8( 'Lunar: ' . stripslashes( $string ) ) . '<br/>' );
+	public function getLunarTransactionByOrderId($orderId)
+	{
+		return Db::getInstance()
+				->getRow('SELECT * FROM ' . _DB_PREFIX_ . 'lunar_transactions WHERE order_id = ' . (int) $orderId);
 	}
 
 	public function hookActionOrderSlipAdd( $params ){
-		/* Check if "Refund" checkbox is checked */
-		if (Tools::isSubmit('doRefundLunar')) {
-			$id_order = $params['order']->id;
-			$amount = 0;
-
-			/* Calculate total amount */
-			foreach ($params['productList'] as $product) {
-				$amount += floatval($product['amount']);
-			}
-
-			/* Add shipping to total */
-			if (Tools::getValue('partialRefundShippingCost')) {
-				$amount += floatval(Tools::getValue('partialRefundShippingCost'));
-			}
-
-			/* For prestashop version > 1.7.7 */
-			if  ($refundData = \Tools::getValue('cancel_product')) {
-				$shipping_amount = floatval(str_replace(',', '.', $refundData['shipping_amount']));
-				if(isset($refundData['shipping']) && $refundData['shipping']==1 && $shipping_amount == 0){
-					$shipping_amount = floatval(str_replace(',', '.', $params['order']->total_shipping));
-				}
-				$amount += $shipping_amount;
-			}
-
-			/* Init payment action */
-			$response = $this->doPaymentAction($id_order,"refund",false,$amount);
-			PrestaShopLogger::addLog( $response['message'] );
-
-			/* Add response to cookies  */
-			if(isset($response['error']) && $response['error'] == '1'){
-				$this->context->cookie->__set('response_error', $response['message']);
-				$this->context->cookie->write();
-			}elseif(isset($response['warning']) && $response['warning'] == '1'){
-				$this->context->cookie->__set('response_warnings', $response['message']);
-				$this->context->cookie->write();
-			}else{
-				$this->context->cookie->__set('response_confirmations', $response['message']);
-				$this->context->cookie->write();
-			}
-		}
+		return $this->adminOrderHelper->refundPaymentOnSlipAdd($params);
 	}
 
-	public function hookActionOrderStatusPostUpdate( $params ) {
-		$order_state = $params['newOrderStatus'];
-		$id_order    = $params['id_order'];
-
-		/* Skip if no module transaction */
-		$dbLunarTransaction = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . 'lunar_transactions WHERE order_id = ' . (int) $id_order );
-		if ( empty( $dbLunarTransaction ) ) {
-			return false;
-		}
-
-		/* If Capture or Cancel */
-		// if ( $order_state->id == (int) Configuration::get( self::ORDER_STATUS ) || $order_state->id == (int) Configuration::get( 'PS_OS_CANCELED' ) ) {
-		if ( $order_state->id == 5 || $order_state->id == (int) Configuration::get( 'PS_OS_CANCELED' ) ) {
-			/* If custom Captured status  */
-			// if ( $order_state->id == (int) Configuration::get( self::ORDER_STATUS ) ) {
-			if ( $order_state->id == 5 ) {
-				$response = $this->doPaymentAction($id_order,"capture");
-			}
-
-			/* If Canceled status */
-			if ( $order_state->id == (int) Configuration::get( 'PS_OS_CANCELED' ) ) {
-				$response = $this->doPaymentAction($id_order,"cancel");
-			}
-
-			/* Log response */
-			PrestaShopLogger::addLog( $response['message'] );
-
-			/* Add response to cookies  */
-			if(isset($response['error']) && $response['error'] == '1'){
-				$this->context->cookie->__set('response_error', $response['message']);
-				$this->context->cookie->write();
-			}elseif(isset($response['warning']) && $response['warning'] == '1'){
-				$this->context->cookie->__set('response_warnings', $response['message']);
-				$this->context->cookie->write();
-			}else{
-				$this->context->cookie->__set('response_confirmations', $response['message']);
-				$this->context->cookie->write();
-			}
-		}
+	public function hookActionOrderStatusPostUpdate( $params )
+	{
+		return $this->adminOrderHelper->paymentActionOnOrderStatusChange($params);
 	}
 
 	/** PS 8 compatibility */
@@ -548,307 +465,15 @@ class LunarPayment extends PaymentModule
 		}
 	}
 
-	/**
-	 * Call action via API.
-	 *
-	 * @param string $id_order - the order id
-	 * @param string $plugin_action - the action to be called.
-	 * @param boolean $change_status - change status flag
-	 * @param float $plugin_amount_to_refund - the refund amount
-	 *
-	 * @return mixed
-	 */
-	 protected function doPaymentAction($id_order, $plugin_action, $change_status = false, $plugin_amount_to_refund = 0){
-		$order                 = new Order( (int) $id_order );
-		$dbLunarTransaction   = Db::getInstance()->getRow( 'SELECT * FROM ' . _DB_PREFIX_ . "lunar_transactions WHERE order_id = " . (int) $id_order );
-		$isTransactionCaptured = $dbLunarTransaction['captured'] == 'YES';
-		$transactionId         = $dbLunarTransaction["lunar_tid"];
-
-		$secretKey = Configuration::get( self::TRANSACTION_MODE ) == 'live'
-						? Configuration::get( self::LIVE_SECRET_KEY )
-						: Configuration::get( self::TEST_SECRET_KEY );
-
-		$apiClient = new ApiClient( $secretKey );
-
-		$fetch    = $apiClient->payments()->fetch( $transactionId );
-		$customer = new Customer( $order->id_customer );
-		$currency = new Currency( (int) $order->id_currency );
-
-		switch ( $plugin_action ) {
-			case "capture":
-				if ( $isTransactionCaptured ) {
-					$response = array(
-						'warning' => 1,
-						'message' => $this->displayErrors('Transaction already Captured.'),
-					);
-				} elseif ( isset( $dbLunarTransaction ) ) {
-					$amount   = ( ! empty( $fetch['transaction']['pendingAmount'] ) ) ? (int) $fetch['transaction']['pendingAmount'] : 0;
-
-					if ( $amount ) {
-						/* Capture transaction */
-						$data    = array(
-							'currency'   => $currency->iso_code,
-							'amount'     => $amount,
-						);
-
-						$capture = $apiClient->payments()->capture( $transactionId, $data );
-
-						if ( is_array( $capture ) && ! empty( $capture['error'] ) && $capture['error'] == 1 ) {
-							PrestaShopLogger::addLog( $capture['message'] );
-							$response = array(
-								'error'   => 1,
-								'message' => $this->displayErrors( $capture['message'], false ),
-							);
-						} else {
-							if ( ! empty( $capture['transaction'] ) ) {
-								//Update order status
-								if($change_status){
-									$order->setCurrentState( (int) Configuration::get( self::ORDER_STATUS ), $this->context->employee->id );
-								}
-
-								/* Update transaction details */
-								$fields = array(
-									'captured' => 'YES',
-								);
-								$this->updateTransaction( $transactionId, (int) $id_order, $fields );
-
-								/* Set message */
-								$message = 'Trx ID: ' . $transactionId . '
-											Authorized Amount: ' . $capture['transaction']['amount'] . '
-											Captured Amount: ' . $capture['transaction']['capturedAmount'] . '
-											Order time: ' . $capture['transaction']['created'] . '
-											Currency code: ' . $capture['transaction']['currency'];
-
-								$message = strip_tags( $message, '<br>' );
-								$this->maybeAddOrderMessage($message, $customer, $order);
-
-								/* Set response */
-								$response = array(
-									'success' => 1,
-									'message' => $this->displayErrors('Transaction successfully Captured.'),
-								);
-							} else {
-								if ( ! empty( $capture[0]['message'] ) ) {
-									$response = array(
-										'warning' => 1,
-										'message' => $this->displayErrors( $capture[0]['message'], false ),
-									);
-								} else {
-									$response = array(
-										'error'   => 1,
-										'message' => $this->displayErrors('Oops! An error occurred while Capture.'),
-									);
-								}
-							}
-						}
-					} else {
-						$response = array(
-							'error'   => 1,
-							'message' => $this->displayErrors('Invalid amount to Capture.'),
-						);
-					}
-				} else {
-					$response = array(
-						'error'   => 1,
-						'message' => $this->displayErrors('Invalid Lunar Transaction.'),
-					);
-				}
-
-				break;
-
-			case "refund":
-				if ( ! $isTransactionCaptured ) {
-					$response = array(
-						'warning' => 1,
-						'message' => $this->displayErrors('You need to Captured Transaction prior to Refund.'),
-					);
-				} elseif ( isset( $dbLunarTransaction ) ) {
-
-					if ( ! Validate::isPrice( $plugin_amount_to_refund ) ) {
-						$response = array(
-							'error'   => 1,
-							'message' => $this->displayErrors('Invalid amount to Refund.'),
-						);
-					} else {
-						/* Refund transaction */
-						$amount              = $plugin_amount_to_refund;
-						$data                = array(
-							'descriptor' => '',
-							'amount'     => $amount,
-						);
-
-						$refund = $apiClient->payments()->refund( $transactionId, $data );
-
-						if ( is_array( $refund ) && ! empty( $refund['error'] ) && $refund['error'] == 1 ) {
-							PrestaShopLogger::addLog( $refund['message'] );
-							$response = array(
-								'error'   => 1,
-								'message' => $this->displayErrors( $refund['message'], false ),
-							);
-						} else {
-							if ( ! empty( $refund['transaction'] ) ) {
-								//Update order status
-								if($change_status){
-									$order->setCurrentState( (int) Configuration::get( 'PS_OS_REFUND' ), $this->context->employee->id );
-								}
-
-								/* Update transaction details */
-								$fields = array(
-									'refunded_amount' => $dbLunarTransaction['refunded_amount'] + $plugin_amount_to_refund,
-								);
-								$this->updateTransaction( $transactionId, (int) $id_order, $fields );
-
-								/* Set message */
-								$message = 'Trx ID: ' . $transactionId . '
-											Authorized Amount: ' . $refund['transaction']['amount'] . '
-											Refunded Amount: ' . $refund['transaction']['refundedAmount'] . '
-											Order time: ' . $refund['transaction']['created'] . '
-											Currency code: ' . $refund['transaction']['currency'];
-
-								$message = strip_tags( $message, '<br>' );
-								$this->maybeAddOrderMessage($message, $customer, $order);
-
-								/* Set response */
-								$response = array(
-									'success' => 1,
-									'message' => $this->displayErrors('Transaction successfully Refunded.'),
-								);
-							} else {
-								if ( ! empty( $refund[0]['message'] ) ) {
-									$response = array(
-										'warning' => 1,
-										'message' => $this->displayErrors( $refund[0]['message'], false ),
-									);
-								} else {
-									$response = array(
-										'error'   => 1,
-										'message' => $this->displayErrors('Oops! An error occurred while Refund.'),
-									);
-								}
-							}
-						}
-					}
-				} else {
-					$response = array(
-						'error'   => 1,
-						'message' => $this->displayErrors('Invalid Lunar Transaction.'),
-					);
-				}
-
-				break;
-
-			case "cancel":
-				if ( $isTransactionCaptured ) {
-					$response = array(
-						'warning' => 1,
-						'message' => $this->displayErrors('You can\'t Cancel transaction now . It\'s already Captured, try to Refund.'),
-					);
-				} elseif ( isset( $dbLunarTransaction ) ) {
-
-					/* Cancel transaction */
-					$amount = (int) $fetch['transaction']['amount'] - $fetch['transaction']['refundedAmount'];
-					$data   = array(
-						'amount' => $amount,
-					);
-
-					$cancel   = $apiClient->payments()->cancel( $transactionId, $data );
-
-					if ( is_array( $cancel ) && ! empty( $cancel['error'] ) && $cancel['error'] == 1 ) {
-						PrestaShopLogger::addLog( $cancel['message'] );
-						$response = array(
-							'error'   => 1,
-							'message' => $this->displayErrors( $cancel['message'], false ),
-						);
-					} else {
-						if ( ! empty( $cancel['transaction'] ) ) {
-							//Update order status
-							if($change_status){
-								$order->setCurrentState( (int) Configuration::get( 'PS_OS_CANCELED' ), $this->context->employee->id );
-							}
-
-							/* Set message */
-							$message = 'Trx ID: ' . $transactionId . '
-										Authorized Amount: ' . $cancel['transaction']['amount'] . '
-										Refunded Amount: ' . $cancel['transaction']['refundedAmount'] . '
-										Order time: ' . $cancel['transaction']['created'] . '
-										Currency code: ' . $cancel['transaction']['currency'];
-
-							$message = strip_tags( $message, '<br>' );
-							$this->maybeAddOrderMessage($message, $customer, $order);
-
-							/* Set response */
-							$response = array(
-								'success' => 1,
-								'message' => $this->displayErrors('Transaction successfully Canceled.'),
-							);
-						} else {
-							if ( ! empty( $cancel[0]['message'] ) ) {
-								$response = array(
-									'warning' => 1,
-									'message' => $this->displayErrors( $cancel[0]['message'], false ),
-								);
-							} else {
-								$response = array(
-									'error'   => 1,
-									'message' => $this->displayErrors('Oops! An error occurred while Cancel.'),
-								);
-							}
-						}
-					}
-				} else {
-					$response = array(
-						'error'   => 1,
-						'message' => $this->displayErrors('Invalid Lunar Transaction.'),
-					);
-				}
-				break;
-		}
-		return $response;
-	}
 
 	/**
 	 * 
 	 */
-	private function maybeAddOrderMessage(string $message, Customer $customer, Order $order)
+	private function doPaymentAction($id_order, $plugin_action, $change_status = false, $plugin_amount_to_refund = 0)
 	{
-		if ( ! Validate::isCleanHtml( $message ) ) {
-			return;
-		}
-
-		if ( $this->getPSV() == '1.7.2' ) {
-			$id_customer_thread = CustomerThread::getIdCustomerThreadByEmailAndIdOrder( $customer->email, $order->id );
-			if ( ! $id_customer_thread ) {
-				$customer_thread              = new CustomerThread();
-				$customer_thread->id_contact  = 0;
-				$customer_thread->id_customer = (int) $order->id_customer;
-				$customer_thread->id_shop     = (int) $this->context->shop->id;
-				$customer_thread->id_order    = (int) $order->id;
-				$customer_thread->id_lang     = (int) $this->context->language->id;
-				$customer_thread->email       = $customer->email;
-				$customer_thread->status      = 'open';
-				$customer_thread->token       = Tools::passwdGen( 12 );
-				$customer_thread->add();
-			} else {
-				$customer_thread = new CustomerThread( (int) $id_customer_thread );
-			}
-
-			$customer_message                     = new CustomerMessage();
-			$customer_message->id_customer_thread = $customer_thread->id;
-			$customer_message->id_employee        = 0;
-			$customer_message->message            = $message;
-			$customer_message->private            = 1;
-			$customer_message->add();
-
-		} else {
-			$msg              = new Message();
-			$msg->message     = $message;
-			$msg->id_cart     = (int) $order->id_cart;
-			$msg->id_customer = (int) $order->id_customer;
-			$msg->id_order    = (int) $order->id;
-			$msg->private     = 1;
-			$msg->add();
-		}
+		return $this->adminOrderHelper->processOrderPayment($id_order, $plugin_action, $change_status, $plugin_amount_to_refund);
 	}
+
 
 	/**
 	 * 

@@ -46,27 +46,9 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
         parent::__construct();
         $this->setTemplate('module:lunarpayment/views/templates/front/empty.tpl');
                 
-        $this->setPaymentMethod();
-
+        $this->paymentMethod = $this->module->getPaymentMethodByName(Tools::getValue('lunar_method'));
         if (!$this->paymentMethod) {
             $this->redirectBackWithNotification('Payment method not loaded');
-        }
-    }
-    
-    /**
-     * @return void
-     */
-    private function setPaymentMethod()
-    {
-        switch(Tools::getValue('lunar_method')) {
-            case LunarCardMethod::METHOD_NAME:
-                $this->paymentMethod = $this->module->cardMethod;
-                break;
-            case LunarMobilePayMethod::METHOD_NAME:
-                $this->paymentMethod = $this->module->mobilePayMethod;
-                break;
-            default:
-                return;  
         }
     }
 

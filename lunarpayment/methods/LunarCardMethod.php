@@ -71,7 +71,7 @@ class LunarCardMethod extends AbstractLunarMethod
         return array_merge(
             parent::getConfiguration(), 
             [
-                $this->ACCEPTED_CARDS . '[]' =>  Configuration::get($this->ACCEPTED_CARDS)
+                $this->ACCEPTED_CARDS . '[]' =>  explode(',', Configuration::get($this->ACCEPTED_CARDS))
             ]
         );
 	}
@@ -85,8 +85,6 @@ class LunarCardMethod extends AbstractLunarMethod
 
         if ( $acceptedCards && count( $acceptedCards ) > 1 ) {
             $acceptedCards = implode( ',', $acceptedCards );
-        } else {
-            $acceptedCards = $acceptedCards;
         }
 
         Configuration::updateValue( $this->ACCEPTED_CARDS, $acceptedCards );
@@ -117,7 +115,7 @@ class LunarCardMethod extends AbstractLunarMethod
             'type'     => 'select',
             'tab'      => $this->tabName,
             'label'    => '<span data-toggle="tooltip" title="' . $this->t( 'Choose logos to show in frontend checkout page.' ) . '">' . $this->t( 'Accepted cards' ) . '<i class="process-icon-help-new help-icon" aria-hidden="true"></i></span>',
-            'name'     => $this->ACCEPTED_CARDS,
+            'name'     => $this->ACCEPTED_CARDS . '[]',
             'class'    => "lunar-config accepted-cards",
             'multiple' => true,
             'options'  => array(

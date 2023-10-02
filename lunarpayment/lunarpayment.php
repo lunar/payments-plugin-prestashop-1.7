@@ -296,12 +296,12 @@ class LunarPayment extends PaymentModule
 		if ( $order->module == $this->name ) {
 			$order_token = Tools::getAdminToken( 'AdminOrders' . (int)  Tab::getIdFromClassName('AdminOrders') . (int) $this->context->employee->id );
 			$dbLunarTransaction = $this->getLunarTransactionByOrderId($id_order);
+
 			$this->context->smarty->assign( array(
-				'ps_version'         			  => _PS_VERSION_,
 				'id_order'           			  => $id_order,
 				'order_token'        			  => $order_token,
 				"lunartransaction" 				  => $dbLunarTransaction,
-				'not_captured_text'	  			  => $this->trans('Captured Transaction prior to Refund via Lunar'),
+				'not_captured_text'	  			  => $this->trans('Capture Transaction prior to Refund via Lunar'),
 				'checkbox_text' 	  			  => $this->trans('Refund Lunar')
 			) );
 
@@ -359,7 +359,7 @@ class LunarPayment extends PaymentModule
 		if ( Tools::getIsset( 'vieworder' ) && Tools::getIsset( 'id_order' ) && Tools::getIsset( "lunar_action" ) ) {
 			$plugin_action = Tools::getValue( "lunar_action" );
 			$id_order = (int) Tools::getValue( 'id_order' );
-			$response = $this->doPaymentAction($id_order,$plugin_action,true,Tools::getValue( "lunar_amount_to_refund" ));
+			$response = $this->doPaymentAction($id_order, $plugin_action, Tools::getValue( "lunar_amount_to_refund" ));
 			die( json_encode( $response ) );
 		}
 
@@ -469,9 +469,9 @@ class LunarPayment extends PaymentModule
 	/**
 	 * 
 	 */
-	private function doPaymentAction($id_order, $plugin_action, $change_status = false, $plugin_amount_to_refund = 0)
+	private function doPaymentAction($id_order, $plugin_action, $plugin_amount_to_refund = 0)
 	{
-		return $this->adminOrderHelper->processOrderPayment($id_order, $plugin_action, $change_status, $plugin_amount_to_refund);
+		return $this->adminOrderHelper->processOrderPayment($id_order, $plugin_action, $plugin_amount_to_refund);
 	}
 
 
@@ -490,7 +490,7 @@ class LunarPayment extends PaymentModule
 	 * 
 	 */
 	public function t($string) {
-		$this->trans($string);
+		return $this->trans($string);
 	}
 
 	/**

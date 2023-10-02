@@ -65,8 +65,9 @@
 
     function initLinkedCheckboxes(slipCheckboxId, checkboxId){
         /* Skip if "Generate a credit slip" is not present */
-        if(!$(slipCheckboxId).length)
+        if(!$(slipCheckboxId).length) {
             return false;
+        }
 
         /* Make "Refund" checkbox dependent on "Generate a credit slip" checkbox */
         $(checkboxId).change(function() {
@@ -92,6 +93,16 @@
         }
     }
 
+    function dysplayAlertMessage(html, type = 'success') {
+        $('#alert').html(html);
+        $('#alert').removeClass('alert-success')
+            .removeClass('alert-info')
+            .removeClass('alert-warning')
+            .removeClass('alert-danger')
+            .addClass(`alert-${type}`);
+        $('#alert').show();
+    }
+
     function submitModulePaymentActionClickHandler(e) {
         e.preventDefault();
         $('#alert').hide();
@@ -109,13 +120,7 @@
             }
         }
         if (errorFlag) {
-            $('#alert').html(html);
-            $('#alert').removeClass('alert-success')
-                .removeClass('alert-info')
-                .removeClass('alert-warning')
-                .removeClass('alert-danger')
-                .addClass('alert-warning');
-            $('#alert').show();
+            dysplayAlertMessage(html, 'warning');
             return false;
         }
         /* Make an AJAX call for payment action */
@@ -132,13 +137,9 @@
                 if (response.hasOwnProperty('success') && response.hasOwnProperty('message')) {
                     var message = response.message;
                     var html = '<strong>Success!</strong> ' + message;
-                    $('#alert').html(html);
-                    $('#alert').removeClass('alert-success')
-                        .removeClass('alert-info')
-                        .removeClass('alert-warning')
-                        .removeClass('alert-danger')
-                        .addClass('alert-success');
-                    $('#alert').show();
+                    
+                    dysplayAlertMessage(html, 'success');
+
                     setTimeout(function () {
                         console.log('page reloaded');
                         location.reload();
@@ -146,23 +147,12 @@
                 } else if (response.hasOwnProperty('warning') && response.hasOwnProperty('message')) {
                     var message = response.message;
                     var html = '<strong>Warning!</strong> ' + message;
-                    $('#alert').html(html);
-                    $('#alert').removeClass('alert-success')
-                        .removeClass('alert-info')
-                        .removeClass('alert-warning')
-                        .removeClass('alert-danger')
-                        .addClass('alert-warning');
-                    $('#alert').show();
+                    dysplayAlertMessage(html, 'warning');
+
                 } else if (response.hasOwnProperty('error') && response.hasOwnProperty('message')) {
                     var message = response.message;
                     var html = '<strong>Error!</strong> ' + message;
-                    $('#alert').html(html);
-                    $('#alert').removeClass('alert-success')
-                        .removeClass('alert-info')
-                        .removeClass('alert-warning')
-                        .removeClass('alert-danger')
-                        .addClass('alert-danger');
-                    $('#alert').show();
+                    dysplayAlertMessage(html, 'danger');
                 }
             },
             error: function (response) {
@@ -179,7 +169,7 @@
         <form id="lunar_form"
                 action="{$link->getAdminLink('AdminOrders', false)|escape:'htmlall':'UTF-8'}&amp;id_order={$id_order|escape:'htmlall':'UTF-8'}&amp;vieworder&amp;token={$order_token|escape:'htmlall':'UTF-8'}"
                 method="post">
-            <fieldset {if $ps_version < 1.5}style="width: 400px;"{/if}>
+            <fieldset>
                 <legend class="panel-heading">
                     <img src="../img/os/7.gif" alt=""/>{l s='Process Lunar Payment' mod=lunarpayment }
                 </legend>
@@ -200,13 +190,13 @@
                 <div class="form-group margin-form">
                     <div class="col-md-12">
                         <input class="form-control" name="lunar_amount_to_refund" style="display: none;"
-                                placeholder="{l s='Amount to refund' mod=lunarpayment }" type="text"/>
+                            placeholder="{l s='Amount to refund' mod=lunarpayment }" type="text"/>
                     </div>
                 </div>
 
                 <div class="form-group margin-form">
                     <input class="pull-right btn btn-default" name="submit_lunar_action" id="submit_lunar_action"
-                            type="submit" class="btn btn-primary" value="{l s='Process Action' mod=lunarpayment }"/>
+                        type="submit" class="btn btn-primary" value="{l s='Process Action' mod=lunarpayment }"/>
                 </div>
             </fieldset>
         </form>

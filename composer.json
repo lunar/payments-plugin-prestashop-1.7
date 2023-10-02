@@ -1,6 +1,6 @@
 {
   "name": "lunar/plugin-prestashop",
-  "description": "Lunar prestashop gateway development",
+  "description": "Lunar Online Payments for Prestashop",
   "license": "MIT",
   "authors": [
     {

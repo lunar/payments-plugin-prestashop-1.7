@@ -7,21 +7,21 @@ namespace Composer\Autoload;
 class ComposerStaticInit15ac80d9eec6bcbbcbdcec5f1b390a9f
 {
     public static $prefixLengthsPsr4 = array (
-        'P' => 
+        'L' => 
         array (
-            'Paylike\\Tests\\' => 14,
-            'Paylike\\' => 8,
+            'Lunar\\Payment\\' => 14,
+            'Lunar\\' => 6,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'Paylike\\Tests\\' => 
+        'Lunar\\Payment\\' => 
         array (
-            0 => __DIR__ . '/..' . '/paylike/php-api/tests',
+            0 => __DIR__ . '/../..' . '/',
         ),
-        'Paylike\\' => 
+        'Lunar\\' => 
         array (
-            0 => __DIR__ . '/..' . '/paylike/php-api/src',
+            0 => __DIR__ . '/..' . '/lunar/payments-api-sdk/src',
         ),
     );
 

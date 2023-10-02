@@ -62,7 +62,6 @@ class LunarPayment extends PaymentModule
 	{
 		return ( 
 			parent::install()
-			&& $this->registerHook( 'payment' )
 			&& $this->registerHook( 'paymentOptions' )
 			&& (version_compare(_PS_VERSION_, '8', '<') ? $this->registerHook( 'paymentReturn' ) : $this->registerHook( 'displayPaymentReturn' ))
 			&& $this->registerHook( 'DisplayAdminOrder' )
@@ -97,10 +96,10 @@ class LunarPayment extends PaymentModule
 	{
 		return (
 			parent::uninstall()
-			&& Db::getInstance()->execute( 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . "lunar_transactions`" )
-			&& Db::getInstance()->execute( 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . "lunar_logos`" )
 			&& $this->cardMethod->uninstall()
 			&& $this->mobilePayMethod->uninstall()
+			&& Db::getInstance()->execute( 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . "lunar_transactions`" )
+			&& Db::getInstance()->execute( 'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . "lunar_logos`" )
 		);
 	}
 

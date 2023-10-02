@@ -27,14 +27,14 @@ class LunarpaymentPaymentReturnModuleFrontController extends AbstractLunarFrontC
 
     public function postProcess()
     {
-        $instantMode = ('instant' == $this->getConfigValue('CHECKOUT_MODE'));
-        $orderStatusCode = $instantMode ? $this->getConfigValue('ORDER_STATUS') : Configuration::get('PS_OS_PAYMENT');
-
-        $this->customer  = new Customer((int) $this->cart->id_customer);
-        $this->totalAmount = (string) $this->cart->getOrderTotal(true, Cart::BOTH);
-        $this->currencyCode = Currency::getIsoCodeById((int) $this->cart->id_currency);
+        $this->customer  = new Customer((int) $this->contextCart->id_customer);
+        $this->totalAmount = (string) $this->contextCart->getOrderTotal(true, Cart::BOTH);
+        $this->currencyCode = Currency::getIsoCodeById((int) $this->contextCart->id_currency);
 
         $this->paymentIntentId = $this->getPaymentIntentCookie();
+
+        $instantMode = ('instant' == $this->getConfigValue('CHECKOUT_MODE'));
+        $orderStatusCode = $instantMode ? $this->getConfigValue('ORDER_STATUS') : Configuration::get('PS_OS_PAYMENT');
 
         if (!$this->paymentIntentId) {
             $this->redirectBackWithNotification('The payment intent id wasn\'t found.');
@@ -99,15 +99,15 @@ class LunarpaymentPaymentReturnModuleFrontController extends AbstractLunarFrontC
     private function orderValidation($orderStatusCode): bool
     {
         return $this->module->validateOrder(
-            $this->cart->id, 
+            $this->contextCart->id, 
             $orderStatusCode, 
-            $this->cart->getOrderTotal(), 
-            $this->module->displayName . ' (' . ucfirst($this->paymentMethod->METHOD_NAME) . ')', 
+            $this->contextCart->getOrderTotal(), 
+            $this->getConfigValue('METHOD_TITLE'),
             null,
             [
                 'transaction_id' => $this->paymentIntentId
             ], 
-            (int) $this->cart->id_currency, 
+            (int) $this->contextCart->id_currency, 
             false, 
             $this->customer->secure_key
         );
@@ -123,7 +123,7 @@ class LunarpaymentPaymentReturnModuleFrontController extends AbstractLunarFrontC
                 true,
                 (int) $this->context->language->id,
                 [
-                    'id_cart' => (int) $this->cart->id,
+                    'id_cart' => (int) $this->contextCart->id,
                     'id_module' => (int) $this->module->id,
                     'id_order' => $this->module->currentOrder,
                     'key' => $this->customer->secure_key,
@@ -293,8 +293,8 @@ class LunarpaymentPaymentReturnModuleFrontController extends AbstractLunarFrontC
         } else {
             $msg = new Message();
             $msg->message     = $message;
-            $msg->id_cart     = (int) $this->cart->id;
-            $msg->id_customer = (int) $this->cart->id_customer;
+            $msg->id_cart     = (int) $this->contextCart->id;
+            $msg->id_customer = (int) $this->contextCart->id_customer;
             $msg->id_order    = (int) $this->module->currentOrder;
             $msg->private     = 1;
             $msg->add();

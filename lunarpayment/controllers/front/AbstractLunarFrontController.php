@@ -36,7 +36,7 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     public $errors = [];
     protected string $intentIdKey = '_lunar_intent_id';
     protected bool $testMode = false;
-    protected ?Cart $cart = null;
+    protected ?Cart $contextCart = null; // to not interfere with static $cart from PS 1.7
     protected array $args = [];
     protected string $publicKey = '';
 
@@ -59,7 +59,7 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     {
         parent::init();
 
-        $this->cart = $this->context->cart;
+        $this->contextCart = $this->context->cart;
 
         $this->validate();
 
@@ -120,11 +120,11 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
     {
         if (
             !(
-                true === Validate::isLoadedObject($this->cart)
-                && true === Validate::isUnsignedInt($this->cart->id_customer)
-                && true === Validate::isUnsignedInt($this->cart->id_address_delivery)
-                && true === Validate::isUnsignedInt($this->cart->id_address_invoice)
-                && false === $this->cart->isVirtualCart()
+                true === Validate::isLoadedObject($this->contextCart)
+                && true === Validate::isUnsignedInt($this->contextCart->id_customer)
+                && true === Validate::isUnsignedInt($this->contextCart->id_address_delivery)
+                && true === Validate::isUnsignedInt($this->contextCart->id_address_invoice)
+                && false === $this->contextCart->isVirtualCart()
             )
         ) {
             $this->redirectBackWithNotification('Context validations failed');

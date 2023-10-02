@@ -47,17 +47,17 @@ class LunarpaymentRedirectModuleFrontController extends AbstractLunarFrontContro
             $this->args['test'] = $this->getTestObject();
         }
 
-        $customer  = new Customer( (int) $this->cart->id_customer );
+        $customer  = new Customer( (int) $this->contextCart->id_customer );
         $name      = $customer->firstname . ' ' . $customer->lastname;
         $email     = $customer->email;
-        $address   = new Address( (int) ( $this->cart->id_address_delivery ) );
+        $address   = new Address( (int) ( $this->contextCart->id_address_delivery ) );
         $telephone = $address->phone ?? $address->phone_mobile ?? '';
         $address   = $address->address1 . ', ' . $address->address2 . ', ' . $address->city 
                     . ', ' . $address->country . ' - ' . $address->postcode;
 
         $this->args['amount'] = [
             'currency' => $this->context->currency->iso_code,
-            'decimal' => (string) $this->cart->getOrderTotal(),
+            'decimal' => (string) $this->contextCart->getOrderTotal(),
         ];
 
         $this->args['custom'] = [
@@ -107,7 +107,7 @@ class LunarpaymentRedirectModuleFrontController extends AbstractLunarFrontContro
     {
 		$products_array = [];
 
-        $products = $this->cart->getProducts();
+        $products = $this->contextCart->getProducts();
 		
         foreach ( $products as $product ) {
 			$products_array[] = [

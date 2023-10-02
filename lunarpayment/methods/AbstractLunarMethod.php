@@ -88,7 +88,7 @@ abstract class AbstractLunarMethod
 			&& Configuration::updateValue( $this->LOGO_URL, '' )
 			&& Configuration::updateValue( $this->CHECKOUT_MODE, 'delayed' )
 			&& Configuration::updateValue( $this->ORDER_STATUS, Configuration::get( $this->ORDER_STATUS ) )
-			&& Configuration::updateValue( $this->METHOD_TITLE, $this->METHOD_NAME )
+			&& Configuration::updateValue( $this->METHOD_TITLE, ucfirst($this->METHOD_NAME) )
 			&& Configuration::updateValue( $this->METHOD_DESCRIPTION, $this->DESCRIPTION )
 			&& Configuration::updateValue( $this->SHOP_TITLE, Configuration::get( 'PS_SHOP_NAME' ) ?? '' )
 		);

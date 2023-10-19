@@ -1,7 +1,7 @@
 {
   "name": "lunar/payments-api-sdk",
   "description": "PHP SDK to communicate with the Lunar HTTP API",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "license": "MIT",
   "minimum-stability": "dev",
   "autoload": {

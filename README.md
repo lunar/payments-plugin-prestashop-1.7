@@ -33,6 +33,8 @@ Under the extension settings, you can:
  * For Prestashop < 1.7.7 you can proceed capture, refund and cancel actions via Lunar Toolbox also.
 
  ## Changelog
+#### 2.1.0:
+- Fixed rounding refund value & removed test fields
 #### 2.0.0:
 - Migrated to hosted checkout flow
 #### 1.0.0:

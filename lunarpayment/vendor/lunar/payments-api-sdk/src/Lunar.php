@@ -17,6 +17,7 @@ class Lunar
 	 * @var string
 	 */
 	const BASE_URL = 'https://api.prod.lunarway.com/merchant-payments/v1';
+	const TEST_BASE_URL = 'https://api.dev.lunarway.com/merchant-payments/v1';
 
 	/**
 	 * @var HttpClientInterface
@@ -38,11 +39,12 @@ class Lunar
 	 * @param HttpClientInterface $client
 	 * @throws Exception\ApiException
 	 */
-	public function __construct($api_key, HttpClientInterface $client = null)
+	public function __construct($api_key, HttpClientInterface $client = null, $test = false)
 	{
 		$this->api_key = $api_key;
+		$url = $test ? self::TEST_BASE_URL : self::BASE_URL;
 		$this->client  = $client ? $client
-			: new CurlClient($this->api_key, self::BASE_URL);
+			: new CurlClient($this->api_key, $url);
 	}
 
 	/**

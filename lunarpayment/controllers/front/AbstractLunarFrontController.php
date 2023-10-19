@@ -63,17 +63,15 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
 
         $this->validate();
 
-        $this->testMode = 'test' == $this->getConfigValue('TRANSACTION_MODE');
-        if ($this->testMode) {
-            $this->publicKey =  $this->getConfigValue('TEST_PUBLIC_KEY');
-            $privateKey =  $this->getConfigValue('TEST_SECRET_KEY');
-        } else {
-            $this->publicKey = $this->getConfigValue('LIVE_PUBLIC_KEY');
-            $privateKey = $this->getConfigValue('LIVE_SECRET_KEY');
-        }
+		if ($this->context->cookie->__isset('lunar_testmode')) {
+			$this->testMode = (bool) $this->context->cookie->__get('lunar_testmode');
+		}
+
+		$appKey = $this->getConfigValue('APP_KEY');
+        $this->publicKey =  $this->getConfigValue('PUBLIC_KEY');
 
         /** API Client instance */
-        $this->lunarApiClient = new ApiClient($privateKey);
+        $this->lunarApiClient = new ApiClient($appKey, null, $this->testMode);
     }
 
     /**

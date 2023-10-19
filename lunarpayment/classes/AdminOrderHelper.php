@@ -5,7 +5,6 @@ namespace Lunar\Payment\classes;
 use \Db;
 use \Order;
 use \Tools;
-use \Module;
 use \Context;
 use \Message;
 use \Currency;
@@ -30,6 +29,7 @@ class AdminOrderHelper
 	private Order $order;
 	private Context $context;
 	private string $action = '';
+	private bool $testMode = false;
 
 	private array $actionMap = [
 		'capture' => 'Captured',
@@ -70,10 +70,12 @@ class AdminOrderHelper
 		$customer = new Customer($this->order->id_customer);
 		$totalAmount = (string) $this->order->getTotalPaid();
 
-		$secretKey = $this->getConfigValue('TRANSACTION_MODE') == 'live'
-						? $this->getConfigValue('LIVE_SECRET_KEY')
-						: $this->getConfigValue('TEST_SECRET_KEY');
-		$apiClient = new ApiClient($secretKey);
+		if ($this->context->cookie->__isset('lunar_testmode')) {
+			$this->testMode = (bool) $this->context->cookie->__get('lunar_testmode');
+		}
+
+		$appKey = $this->getConfigValue('APP_KEY');
+		$apiClient = new ApiClient($appKey, null, $this->testMode);
 
 		$fetchedTransaction = $apiClient->payments()->fetch($transactionId);
 
@@ -151,7 +153,7 @@ class AdminOrderHelper
 
 				/** Leave order status unchanged until full refund */
                 ($amount_to_refund == $maxAmountToRefund)
-					? $newOrderStatus = (int) _PS_OS_REFUND_
+					? $newOrderStatus = (int) Configuration::get('PS_OS_REFUND')
 					: $newOrderStatus = null;
 
 				break;
@@ -164,7 +166,7 @@ class AdminOrderHelper
 					];
 				}
 
-				$newOrderStatus = (int) _PS_OS_CANCELED_;
+				$newOrderStatus = (int) Configuration::get('PS_OS_CANCELED');
 
 				break;
 		}
@@ -346,7 +348,7 @@ class AdminOrderHelper
 		
 		if (
 			$order_state->id != $customCaptureStatus
-			&& $order_state->id != _PS_OS_CANCELED_
+			&& $order_state->id != Configuration::get('PS_OS_CANCELED')
 		) {
 			return false;
 		}
@@ -355,7 +357,7 @@ class AdminOrderHelper
 			$response = $this->processOrderPayment($id_order, "capture");
 		}
 
-		if ($order_state->id == _PS_OS_CANCELED_) {
+		if ($order_state->id == Configuration::get('PS_OS_CANCELED')) {
 			$response = $this->processOrderPayment($id_order, "cancel");
 		}
 		

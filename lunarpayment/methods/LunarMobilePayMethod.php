@@ -60,10 +60,35 @@ class LunarMobilePayMethod extends AbstractLunarMethod
 	 */
 	public function updateConfiguration()
     {
+        if (!$this->validateConfigId()) {
+            return false;
+        }
 
         Configuration::updateValue( $this->CONFIGURATION_ID, Tools::getvalue( $this->CONFIGURATION_ID ));
 
         return parent::updateConfiguration();
+	}
+
+    /**
+	 * @return void
+	 */
+	private function validateConfigId()
+	{
+        $configId = Tools::getvalue($this->CONFIGURATION_ID) ?? '';
+        
+        if (! $configId) {
+            $errorMessage = 'Configuration ID is required';
+		
+		} elseif (mb_strlen($configId) != 32) {
+            $errorMessage = sprintf('Configuration ID must have exactly 32 chars, %s given', mb_strlen($configId));
+        }
+
+        if ($errorMessage) {
+			$this->context->controller->errors[$this->CONFIGURATION_ID] = $errorMessage;
+			return false;
+		}
+
+        return true;
 	}
 
     /**

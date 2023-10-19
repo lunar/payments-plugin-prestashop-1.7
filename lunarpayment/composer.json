@@ -2,7 +2,7 @@
   "name": "lunar/plugin-prestashop",
   "description": "Lunar Online Payments for Prestashop",
   "type": "prestashop-module",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "license": [
       "MIT"
   ],
@@ -18,12 +18,6 @@
     }
   },
   "require": {
-    "lunar/payments-api-sdk": "dev-initial-dev"
-  },
-  "repositories": [
-    {
-        "type": "vcs",
-        "url": "https://github.com/lunar/payments-api-sdk"
-    }
-  ]
+    "lunar/payments-api-sdk": "dev-master"
+  }
 }

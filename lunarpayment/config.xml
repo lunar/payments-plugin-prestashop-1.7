@@ -2,7 +2,7 @@
 <module>
     <name>lunarpayment</name>
     <displayName><![CDATA[Lunar]]></displayName>
-    <version><![CDATA[2.0.0]]></version>
+    <version><![CDATA[2.1.0]]></version>
     <description><![CDATA[Receive payments with Lunar]]></description>
     <author><![CDATA[Lunar]]></author>
     <tab><![CDATA[payments_gateways]]></tab>

@@ -182,7 +182,7 @@
                         {/if}
                         <option value="refund">{l s='Refund' mod=lunarpayment }</option>
                         {if $lunartransaction['captured'] == "NO"}
-                            <option value="void">{l s='Void' mod=lunarpayment }</option>
+                            <option value="cancel">{l s='Cancel' mod=lunarpayment }</option>
                         {/if}
                     </select>
                 </div>

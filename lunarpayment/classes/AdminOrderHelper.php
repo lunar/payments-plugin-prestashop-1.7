@@ -135,7 +135,7 @@ class AdminOrderHelper
 				}
 				
 				/** Round to currency precision */
-				$amount_to_refund = round($amount_to_refund, $currency->precision);
+				$amount_to_refund = number_format($amount_to_refund, $currency->precision);
 
 				/* Modify amount to refund accordingly */
 				$maxAmountToRefund = ($totalAmount - $refundedAmount);

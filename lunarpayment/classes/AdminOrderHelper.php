@@ -79,7 +79,10 @@ class AdminOrderHelper
 
 		} catch (ApiException $e) {
 			PrestaShopLogger::addLog($e->getMessage(), PrestaShopLogger::LOG_SEVERITY_LEVEL_ERROR);
-			throw new \Exception($e->getMessage());
+			return [
+				'error'   => 1,
+				'message' => $e->getMessage(),
+			];
 		}
 
 		if (!$fetchedTransaction && !$fetchedTransaction['authorisationCreated']) {
@@ -182,13 +185,19 @@ class AdminOrderHelper
 
 		} catch (ApiException $e) {
 			PrestaShopLogger::addLog($e->getMessage(), PrestaShopLogger::LOG_SEVERITY_LEVEL_ERROR);
-			throw new \Exception($e->getMessage());
+			return [
+				'error'   => 1,
+				'message' => $e->getMessage(),
+			];
 		}
 
 		if ($apiTransaction && 'completed' != $apiTransaction["{$this->action}State"]) {
 			$message = $apiTransaction['declinedReason']['error'] ?? json_encode($apiTransaction);
 			PrestaShopLogger::addLog($message, PrestaShopLogger::LOG_SEVERITY_LEVEL_ERROR);
-			throw new \Exception($message);
+			return [
+				'error'   => 1,
+				'message' => $message,
+			];
 		}
 
 		if($newOrderStatus){

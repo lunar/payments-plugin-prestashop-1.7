@@ -29,7 +29,6 @@ class AdminOrderHelper
 	private Order $order;
 	private Context $context;
 	private string $action = '';
-	private bool $testMode = false;
 
 	private array $actionMap = [
 		'capture' => 'Captured',
@@ -70,12 +69,18 @@ class AdminOrderHelper
 		$customer = new Customer($this->order->id_customer);
 		$totalAmount = (string) $this->order->getTotalPaid();
 
-        $this->testMode = (bool) $_COOKIE['lunar_testmode'];
+        $testMode = (bool) $_COOKIE['lunar_testmode'];
 
 		$appKey = $this->getConfigValue('APP_KEY');
-		$apiClient = new ApiClient($appKey, null, $this->testMode);
+		$apiClient = new ApiClient($appKey, null, $testMode);
 
-		$fetchedTransaction = $apiClient->payments()->fetch($transactionId);
+		try {
+			$fetchedTransaction = $apiClient->payments()->fetch($transactionId);
+
+		} catch (ApiException $e) {
+			PrestaShopLogger::addLog($e->getMessage(), PrestaShopLogger::LOG_SEVERITY_LEVEL_ERROR);
+			throw new \Exception($e->getMessage());
+		}
 
 		if (!$fetchedTransaction && !$fetchedTransaction['authorisationCreated']) {
 			return [
@@ -104,7 +109,6 @@ class AdminOrderHelper
 
 		$apiTransaction = null;
 		$newOrderStatus = null;
-		$diffAmount = null;
 
 		switch ($this->action) {
 			case "capture":
@@ -138,7 +142,7 @@ class AdminOrderHelper
 				$amount_to_refund = number_format($amount_to_refund, $currency->precision);
 
 				/* Modify amount to refund accordingly */
-				$maxAmountToRefund = ($totalAmount - $refundedAmount);
+				$maxAmountToRefund = $totalAmount - $refundedAmount;
 
                 if ($amount_to_refund > $maxAmountToRefund) {
 					return [
@@ -147,10 +151,14 @@ class AdminOrderHelper
 					];
                 }
 
-				$data['amount']['decimal'] = (string) $amount_to_refund;
+				$data['amount']['decimal'] = $amount_to_refund;
+
+				// For the case of a cent difference (overcome rounding issues)
+				$difference = number_format($maxAmountToRefund - $amount_to_refund, $currency->precision);
+				$precision = 1 / (10 ** $currency->precision);
 
 				/** Leave order status unchanged until full refund */
-                ($amount_to_refund == $maxAmountToRefund)
+                ($amount_to_refund == $maxAmountToRefund || $difference <= $precision)
 					? $newOrderStatus = (int) Configuration::get('PS_OS_REFUND')
 					: $newOrderStatus = null;
 
@@ -195,6 +203,7 @@ class AdminOrderHelper
 				: null
 			);
 
+		$diffAmount = null;
 		$newOrderStatus ?: $diffAmount = $amount_to_refund; // if it's a partial refund
 		$this->maybeAddOrderMessage($customer, $fetchedTransaction, $diffAmount);
 

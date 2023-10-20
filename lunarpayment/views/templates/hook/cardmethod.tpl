@@ -29,8 +29,6 @@
         <div class="payment_module lunar-payment clearfix"
                 style=" border: 1px solid #d6d4d4; border-radius: 4px; display: block; font-size: 17px; font-weight: bold; padding: 20px 20px;">
             
-            <img src="{$module_path}logo.png" style="float:left; vertical-align: middle; margin-right: 10px; width:57px; height:57px;" alt="" />
-            
             <div style="float:left; width:100%">
                 <span style="margin-right: 10px;">{l s={$lunar_card_title} mod=lunarpayment}</span>
                 <span>

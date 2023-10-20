@@ -150,7 +150,7 @@ abstract class AbstractLunarMethod
         }
 
         // @TODO remove these lines and activate validation
-        $APP_KEY = Tools::getvalue( $this->APP_KEY ) ?? '';
+        $app_key = Tools::getvalue( $this->APP_KEY ) ?? '';
         $public_key = Tools::getvalue( $this->PUBLIC_KEY ) ?? '';
 
         // $isSaveAllowed = $this->validateKeys();        

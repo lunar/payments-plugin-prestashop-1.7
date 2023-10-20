@@ -70,9 +70,7 @@ class AdminOrderHelper
 		$customer = new Customer($this->order->id_customer);
 		$totalAmount = (string) $this->order->getTotalPaid();
 
-		if ($this->context->cookie->__isset('lunar_testmode')) {
-			$this->testMode = (bool) $this->context->cookie->__get('lunar_testmode');
-		}
+        $this->testMode = (bool) $_COOKIE['lunar_testmode'];
 
 		$appKey = $this->getConfigValue('APP_KEY');
 		$apiClient = new ApiClient($appKey, null, $this->testMode);

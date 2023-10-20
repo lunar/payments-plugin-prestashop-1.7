@@ -83,7 +83,7 @@ class LunarMobilePayMethod extends AbstractLunarMethod
             $errorMessage = sprintf('Configuration ID must have exactly 32 chars, %s given', mb_strlen($configId));
         }
 
-        if ($errorMessage) {
+        if ($errorMessage ?? null) {
 			$this->context->controller->errors[$this->CONFIGURATION_ID] = $errorMessage;
 			return false;
 		}

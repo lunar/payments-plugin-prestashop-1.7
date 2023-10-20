@@ -2,7 +2,6 @@
 
 namespace Lunar\Payment\controllers\front;
 
-use \Db;
 use \Cart;
 use \Tools;
 use \Module;
@@ -27,13 +26,14 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
 
     /** @var Lunarpayment */
     public $module;
+    public $errors = [];
+    public $ssl = true;
 
     /** @var LunarCardMethod|LunarMobilePayMethod|null */
     protected $paymentMethod = null;
     
     protected ApiClient $lunarApiClient;
 
-    public $errors = [];
     protected string $intentIdKey = '_lunar_intent_id';
     protected bool $testMode = false;
     protected ?Cart $contextCart = null; // to not interfere with static $cart from PS 1.7
@@ -62,13 +62,10 @@ abstract class AbstractLunarFrontController extends \ModuleFrontController
         $this->contextCart = $this->context->cart;
 
         $this->validate();
-
-		if ($this->context->cookie->__isset('lunar_testmode')) {
-			$this->testMode = (bool) $this->context->cookie->__get('lunar_testmode');
-		}
-
+        
 		$appKey = $this->getConfigValue('APP_KEY');
         $this->publicKey =  $this->getConfigValue('PUBLIC_KEY');
+        $this->testMode = (bool) $_COOKIE['lunar_testmode'];
 
         /** API Client instance */
         $this->lunarApiClient = new ApiClient($appKey, null, $this->testMode);

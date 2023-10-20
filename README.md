@@ -20,7 +20,7 @@ Under the extension settings, you can:
  * Update the payment method description in the payment gateways list
  * Update the logo url for the logo that shows up in the hosted checkout page
  * Update app & public keys
- * Change the capture type (Instant/Manual via Lunar Tool)
+ * Change the capture type (Instant/Delayed)
  * Change the status of the order which is going to trigger a capture in delayed mode.
 
 

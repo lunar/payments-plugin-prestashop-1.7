@@ -25,7 +25,7 @@
 </style>
 
 <div class="row">
-    <div class="col-xs-12 col-md-12">
+    <div class="col-xs-12 col-md-12 mb-1">
         <div class="payment_module lunar-payment clearfix"
                 style=" border: 1px solid #d6d4d4; border-radius: 4px; display: block; font-size: 17px; font-weight: bold; padding: 20px 20px;">
             

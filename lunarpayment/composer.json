@@ -2,7 +2,7 @@
   "name": "lunar/plugin-prestashop",
   "description": "Lunar Online Payments for Prestashop",
   "type": "prestashop-module",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "license": [
       "MIT"
   ],

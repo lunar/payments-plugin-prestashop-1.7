@@ -1,8 +1,8 @@
 <?php return array(
     'root' => array(
         'name' => 'lunar/plugin-prestashop',
-        'pretty_version' => '2.1.0',
-        'version' => '2.1.0.0',
+        'pretty_version' => '2.1.1',
+        'version' => '2.1.1.0',
         'reference' => NULL,
         'type' => 'prestashop-module',
         'install_path' => __DIR__ . '/../../',
@@ -22,8 +22,8 @@
             'dev_requirement' => false,
         ),
         'lunar/plugin-prestashop' => array(
-            'pretty_version' => '2.1.0',
-            'version' => '2.1.0.0',
+            'pretty_version' => '2.1.1',
+            'version' => '2.1.1.0',
             'reference' => NULL,
             'type' => 'prestashop-module',
             'install_path' => __DIR__ . '/../../',
